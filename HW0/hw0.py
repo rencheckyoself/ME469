@@ -1,50 +1,31 @@
 import numpy as np
-import math
 import matplotlib.pyplot as plt
+import robotLibrary
 
 
-def LoadData(fileName, header, footer, cols):
-    data = np.genfromtxt(fileName,skip_header = header, skip_footer = footer, names=True, dtype=None, delimiter=' ', usecols=cols)
+def main():
+    #create Robot Object
+    bot = Robot()
 
-    return data
+    #load in data files
+    odomData = bot.LoadData('ds1_Odometry.dat', 3, 0, [0,4,5])
+    measData = bot.LoadData('ds1_Measurement.dat', 3, 0,[0,4,6,7])
+    markerData = bot.LoadData('ds1_Landmark_Groundtruth.dat', 3, 0, [0,2,4,6,8])
+    barData = bot.LoadData('ds1_Barcodes.dat', 3, 0, [0,3])
+    groundtruthData = bot.LoadData('ds1_Groundtruth.dat', 3, 0, [0,3,5,7])
 
-#load in data files
-odomData = LoadData('ds1_Odometry.dat',3,1, [0,4,5])
-measData = LoadData('ds1_Measurement.dat',3,1,[0,4,6,7])
-markerData = LoadData('ds1_Landmark_Groundtruth.dat',3,1,[0,2,4,6,8])
+    #Import Part A2 Data Set
+    movementData = [[0.5,0,1],[0,-1/(2*np.pi),1],[.5,0,1],[0,1/(2*np.pi),1],[.5,0,1]]
 
-# First establish starting position
-def makeMove(startPos,movementSet):
 
-    #startPos = [x,y,heading]
-    #movementSet = [v,w,dt]
-    newPos = [0,0,0]
-    vel = [0,0,0]
-    vel[0] = movementSet[0]*math.cos(startPos[2])
-    vel[1] = movementSet[0]*math.sin(startPos[2])
-    vel[2] = movementSet[1]
+    for i in range(len(movementData)):
 
-    for i in range(len(startPos)):
+        bot.makeMove(movementData[i])
+        ax.plot([bot.prevPos[0], bot.currentPos[0]], [bot.prevPos[1], bot.currentPos[1]],'b')
 
-        newPos[i] = startPos[i] + vel[i]*movementSet[2]
-
-    return newPos
-
-intialPos = [0,0,0] #[x,y,theta]
-movementData = LoadData('partA2.dat',0,0,[0,1,2])
+    print(bot.motionPath)
+    plt.axis([-2,2,-2,2])
+    plt.show()
 
 fig, ax = plt.subplots()
-
-print(movementData)
-
-curPos = intialPos
-
-for i in range(len(movementData)):
-    nextPos = makeMove(curPos,movementData[i])
-
-    ax.plot([curPos[0], nextPos[0]],[curPos[1], nextPos[1]])
-
-    curPos = nextPos
-
-plt.axis([-1.5,1.5,-1.5,1.5])
-plt.show()
+main()
