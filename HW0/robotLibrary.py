@@ -19,9 +19,6 @@ class Robot:
 
         return data
 
-    def UpdateProperties(self):
-
-        pass
 
     # Function to return the next point of motion over some change in time given the starting point and velocities
     #
@@ -53,6 +50,7 @@ class Robot:
             self.currentPos[i] = self.prevPos[i] + vel[i]*movementSet[2]
 
         self.motionPath.append(self.currentPos[:])
+
 
     def plotPath(self):
         pass

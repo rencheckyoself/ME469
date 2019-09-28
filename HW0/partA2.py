@@ -23,6 +23,7 @@ def main():
     plt.title('Part A.2 Results')
     plt.xlabel('Robot X Position (m)')
     plt.ylabel('Robot Y Position (m)')
+    plt.legend(['Robot Trajectory'])
     plt.show()
 
 
