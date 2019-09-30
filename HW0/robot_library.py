@@ -71,8 +71,6 @@ class Robot:
         diff[0] = target_set[0] - self.new_pos[0]
         diff[1] = target_set[1] - self.new_pos[1]
 
-        print diff
-
         expected_value[0] = (diff[0]**2 + diff[1]**2)**.5
         expected_value[1] = math.atan2(diff[1], diff[0]) - self.new_pos[2]
 
