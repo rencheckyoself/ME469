@@ -1,6 +1,7 @@
 """File that contains the Robot Class"""
 
 import numpy as np
+import math
 
 class Robot:
     """"A Class to interact with the motion model of a robot moving in 2D space"""
@@ -46,3 +47,35 @@ class Robot:
             self.new_pos[i] = self.cur_pos[i] + vel[i]*movement_set[2]
 
         self.motion_path.append(self.new_pos[:])
+
+    # Function to return the distance and bearing to a landmark given
+    # the robot location and landmark location.
+    #
+    # Measurement model consists of standard distance equations:
+    #   distance = sqrt( ([robot_loc] - [landmark_loc])^2)
+    #
+    # Input Variable Syntax:
+    #        target_set = [x, y] global location of a landmark
+    #
+    # Output Variable:
+    #        expected_value = [x,y] relative to the robot's location
+    #
+
+    def read_sensor(self, target_set):
+        """Used to calculate the Measurement model"""
+
+        expected_value = [0, 0]
+
+        diff = [0, 0]
+
+        diff[0] = target_set[0] - self.new_pos[0]
+        diff[1] = target_set[1] - self.new_pos[1]
+
+        print diff
+
+        expected_value[0] = (diff[0]**2 + diff[1]**2)**.5
+        expected_value[1] = math.atan2(diff[1], diff[0]) - self.new_pos[2]
+
+
+
+        return expected_value

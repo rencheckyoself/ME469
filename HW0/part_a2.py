@@ -19,8 +19,6 @@ def main():
         print bot.motion_path
         bot.make_move(item[1])
 
-
-
     x_arr, y_arr, _t_arr = map(list, zip(*bot.motion_path))
 
     plt.plot(x_arr, y_arr, 'b')

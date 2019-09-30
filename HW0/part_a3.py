@@ -89,9 +89,6 @@ def main():
         movement_data = [odom_data[i][1], odom_data[i][2], odom_data[i+1][0] - cur_action[0]]
         bot.make_move(movement_data)
 
-
-    print bot.motion_path[-20:-1]
-
     x_arr, y_arr, _t_arr = map(list, zip(*bot.motion_path))
 
     plt.plot(x_arr, y_arr, 'b')
