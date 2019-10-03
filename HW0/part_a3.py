@@ -4,29 +4,44 @@ import numpy as np
 import robot_library
 
 
-
-# Function to import data from a file
-# Files must be in same directory as the python file.
-
 def load_data(file_name, header, footer, cols):
-    """Loads in data from a text file"""
+    """Loads in data from a text file
+       Function to import data from a file
+
+       Input:
+            file_name = Full file names
+            header = number of header rows starting from 0
+            footer = number of footer rows starting from 0
+            cols = select the columns with useful data. set to None for all columns
+
+       Output:
+            data = list type of data from file.
+       Files must be in same directory as the python file."""
 
     data = np.genfromtxt(file_name, skip_header=header, skip_footer=footer,
                          names=True, dtype=None, delimiter=' ', usecols=cols)
-
     return data
 
 def plot_map(landmark_data):
-    """Plots the Landmarks and walls"""
+    """Plots the Landmarks Locations and Walls
 
+       Input:
+             landmark_data: list of landmark_data formatted like the original .dat file
+
+       Output:
+              None. Adds Landmark and walls to final plot"""
+
+    # parse landmark data to plot
     _ignore, land_x, land_y, _ignore, _ignore = map(list, zip(*landmark_data))
 
     plt.plot(land_x, land_y, 'ro', markersize=3)
 
+    # add landmark labels
     for _a, item in enumerate(landmark_data):
         plt.annotate('%s' %item[0], xy=(item[1], item[2]), xytext=(3, 3),
                      textcoords='offset points')
 
+    # Set outer wall locations
     walls_x = [land_x[1], land_x[4], land_x[9], land_x[11], land_x[12], land_x[13], land_x[14],
                land_x[6], land_x[5], land_x[2], land_x[0], land_x[3], land_x[4]]
     walls_y = [land_y[1], land_y[4], land_y[9], land_y[11], land_y[12], land_y[13], land_y[14],
@@ -34,14 +49,14 @@ def plot_map(landmark_data):
 
     plt.plot(walls_x, walls_y, 'k')
 
+    # set inner wall locations
     walls_x = [land_x[10], land_x[8], land_x[7]]
     walls_y = [land_y[10], land_y[8], land_y[7]]
 
     plt.plot(walls_x, walls_y, 'k', label='_nolegend_')
 
-def main():
+def part_a3():
     """Main Routine"""
-
 
 # load in data files
 
@@ -56,7 +71,7 @@ def main():
     bot = robot_library.Robot([groundtruth_data[0][1], groundtruth_data[0][2],
                                groundtruth_data[0][3]])
 
-# Transform Measurement from Barcode to Subject
+# Transform Measurement Subject from Barcode # to Subject #
     for _counter, item in enumerate(meas_data):
         for _match, match in enumerate(bar_data):
             if match[1] == item[1]:
@@ -70,7 +85,6 @@ def main():
 # Plot Groundtruth Data
 
     _ignore, ground_x, ground_y, _ground_t = map(list, zip(*groundtruth_data))
-
 
     #ground_x = ground_x[0:20000]
     #ground_y = ground_y[0:20000]
@@ -101,4 +115,4 @@ def main():
     plt.autoscale(True)
     plt.show()
 
-main()
+part_a3()
