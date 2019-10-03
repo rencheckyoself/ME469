@@ -18,7 +18,7 @@ def part_2a():
     # motion model
     for item in enumerate(movement_data):
         # calculate new state
-        bot.make_move(item[1])
+        bot.make_move(item[1], 0)
 
     # parse data to plot
     x_arr, y_arr, _t_arr = map(list, zip(*bot.motion_path))

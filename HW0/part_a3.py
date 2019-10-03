@@ -89,9 +89,9 @@ def part_a3():
     #ground_x = ground_x[0:20000]
     #ground_y = ground_y[0:20000]
 
-    plt.plot(ground_x[0], ground_y[0], 'kd', markersize=3, label='_nolegend_')
+    #plt.plot(ground_x[0], ground_y[0], 'kd', markersize=3, label='_nolegend_')
     plt.plot(ground_x, ground_y, 'g')
-    plt.plot(ground_x[-1], ground_y[-1], 'ko', markersize=3, label='_nolegend_')
+    #plt.plot(ground_x[-1], ground_y[-1], 'ko', markersize=3, label='_nolegend_')
 
 # Plot Odometry Dataset
 
@@ -101,7 +101,7 @@ def part_a3():
             break
 
         movement_data = [odom_data[i][1], odom_data[i][2], odom_data[i+1][0] - cur_action[0]]
-        bot.make_move(movement_data)
+        bot.make_move(movement_data, 1)
 
     x_arr, y_arr, _t_arr = map(list, zip(*bot.motion_path))
 

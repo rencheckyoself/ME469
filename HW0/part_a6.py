@@ -28,7 +28,7 @@ def part_a6():
         bot.new_pos = robot_locs[i]
 
         # calculate measurement
-        results = bot.read_sensor(item)
+        results = bot.read_sensor(item, 1)
 
         # convert measurement to global domain
         global_results[i] = [bot.new_pos[0] + np.cos(results[1]) * results[0],
@@ -40,6 +40,6 @@ def part_a6():
 
         # print error calculations to console
         print "For Subject #" + str(sub_num[i]) + ":"
-        print "The error in the x direction is " + str(round(error_calc[i][0]))
-        print "The error in the y direction is " + str(round(error_calc[i][1]))
+        print "The error in the x direction is " + str(round(error_calc[i][0], 5))
+        print "The error in the y direction is " + str(round(error_calc[i][1], 5))
 part_a6()
