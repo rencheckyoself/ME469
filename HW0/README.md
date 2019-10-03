@@ -8,7 +8,7 @@ Instructions:
 2) The pythons scripts depend on numpy and matplotlib libraries for data import
    and results printing.
 
-3) Run each part_aX.py file to view the results for each question.
-      -PartA3 run time is less than 5s (at least in my experience)
+3) Run each run_me.py file to view the results for each question.
+      -Run time is less than 10s (at least in my experience)
 
 Also included are the images of the results
