@@ -140,15 +140,15 @@ class Robot:
 
 
         # Set noise value
-        # std dev assume to be 0.009m
+        # std dev assume to be 0.008m
         if noise_check == 1:
-            delta = np.random.normal(0, 0.000036)
+            delta = np.random.normal(0, 0.000064)
         else:
             delta = 0
 
         # Calculate the distance and bearing to the landmark
-        expected_value[0] = (diff[0]**2 + diff[1]**2)**.5 + delta
-        expected_value[1] = math.atan2(diff[1], diff[0]) - self.new_pos[2] + delta
+        expected_value[0] = round((diff[0]**2 + diff[1]**2)**.5 + delta, 5)
+        expected_value[1] = round(math.atan2(diff[1], diff[0]) - self.new_pos[2] + delta, 5)
 
         return expected_value
 
@@ -216,8 +216,10 @@ class Robot:
 
             # print error calculations to console
             print "For Subject #" + str(sub_num[i]) + ":"
+            print "The measured distance is " + str(results[0]) + "m and the calculated bearing is " + str(results[1]) + "rad."
             print "The error in the x direction is " + str(round(error_calc[i][0], 5))
             print "The error in the y direction is " + str(round(error_calc[i][1], 5))
+            print "\n"
 
     def part_a3(self):
         """Main Routine"""
