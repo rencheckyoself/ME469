@@ -9,7 +9,9 @@ def part_2a():
     """Main Routine"""
 
     #create Robot Object
-    bot = robot_library.Robot([0, 0, 0])
+    bot = robot_library.Robot()
+
+    bot.set_initial_pos([0, 0, 0])
 
     #Part A2 Data Set
     movement_data = [[0.5, 0, 1], [0, -1/(2*np.pi), 1], [.5, 0, 1], [0, 1/(2*np.pi), 1], [.5, 0, 1]]

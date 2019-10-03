@@ -9,7 +9,9 @@ def part_a6():
     """Main Routine"""
 
     #create Robot Object
-    bot = robot_library.Robot([0, 0, 0])
+    bot = robot_library.Robot()
+
+    bot.set_initial_pos([0, 0, 0])
 
     #Part A6 Data Set
     sub_num = [6, 13, 17]
@@ -42,4 +44,5 @@ def part_a6():
         print "For Subject #" + str(sub_num[i]) + ":"
         print "The error in the x direction is " + str(round(error_calc[i][0], 5))
         print "The error in the y direction is " + str(round(error_calc[i][1], 5))
+
 part_a6()
