@@ -3,6 +3,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 def load_data(file_name, header, footer, cols):
     """Loads in data from a text file
@@ -55,6 +56,9 @@ def plot_map(landmark_data):
 
     plt.plot(walls_x, walls_y, 'k', label='_nolegend_')
 
+
+
+
 class Robot:
     """"A Class to interact with the motion model of a robot moving in 2D space"""
 
@@ -64,6 +68,18 @@ class Robot:
         self.motion_path = [[0, 0, 0]]
         self.new_pos = [0, 0, 0]
         self.cur_pos = [0, 0, 0]
+        self.seed = 50
+        self.M = 1000
+        self.X_set = [[0, 0, 0]]
+
+        # load in data files
+        self.odom_data = load_data('ds1_Odometry.dat', 3, 0, [0, 4, 5])
+        self.meas_data = load_data('ds1_Measurement.dat', 3, 0, [0, 4, 6, 7])
+        self.marker_data = load_data('ds1_Landmark_Groundtruth.dat', 3, 0, [0, 2, 4, 6, 8])
+        self.bar_data = load_data('ds1_Barcodes.dat', 3, 0, [0, 3])
+        self.groundtruth_data = load_data('ds1_Groundtruth.dat', 3, 0, [0, 3, 5, 7])
+
+        self.generate_particle_set()
 
     def set_initial_pos(self, starting_point):
         """Clear all position arrays and set new starting point"""
@@ -77,6 +93,19 @@ class Robot:
         self.motion_path = [starting_point[:]]
         self.new_pos = starting_point[:]
         self.cur_pos = starting_point[:]
+
+    def generate_particle_set(self):
+        """generate random particle set"""
+
+        k = 0
+        print "Generating particle set..."
+        while k <= self.M:
+
+            #x,y,theta
+            self.X_set.append([random.random(-1, 5),
+                               random.random(-5.5, 5),
+                               random.random(0, 2*np.pi)])
+            k += 1
 
     def make_move(self, movement_set, noise_check):
         """Used to calculate the motion model
@@ -169,9 +198,8 @@ class Robot:
             # calculate new state
             self.make_move(item[1], 0)
 
-        # parse data to plot
+        #Plot Data
         x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
-
 
         plt.plot(x_arr, y_arr, 'b')
 
@@ -224,35 +252,24 @@ class Robot:
     def part_a3(self):
         """Main Routine"""
 
-    # load in data files
-
-        odom_data = load_data('ds1_Odometry.dat', 3, 0, [0, 4, 5])
-        meas_data = load_data('ds1_Measurement.dat', 3, 0, [0, 4, 6, 7])
-        marker_data = load_data('ds1_Landmark_Groundtruth.dat', 3, 0, [0, 2, 4, 6, 8])
-        bar_data = load_data('ds1_Barcodes.dat', 3, 0, [0, 3])
-        groundtruth_data = load_data('ds1_Groundtruth.dat', 3, 0, [0, 3, 5, 7])
-
     # create Robot Object
-
-        self.set_initial_pos([groundtruth_data[0][1], groundtruth_data[0][2],
-                              groundtruth_data[0][3]])
+        self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
+                              self.groundtruth_data[0][3]])
 
         plt.figure()
 
     # Transform Measurement Subject from Barcode # to Subject #
-        for _counter, item in enumerate(meas_data):
-            for _match, match in enumerate(bar_data):
+        for _counter, item in enumerate(self.meas_data):
+            for _match, match in enumerate(self.bar_data):
                 if match[1] == item[1]:
                     item[1] = match[0]
                     break
 
     # plot Landmarks and Walls
-
-        plot_map(marker_data)
+        plot_map(self.marker_data)
 
     # Plot Groundtruth Data
-
-        _ignore, ground_x, ground_y, _ground_t = map(list, zip(*groundtruth_data))
+        _ignore, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
 
         #ground_x = ground_x[0:20000]
         #ground_y = ground_y[0:20000]
@@ -262,17 +279,17 @@ class Robot:
         #plt.plot(ground_x[-1], ground_y[-1], 'ko', markersize=3, label='_nolegend_')
 
     # Plot Odometry Dataset
+        for i, cur_action in enumerate(self.odom_data):
 
-        for i, cur_action in enumerate(odom_data):
-
-            if i + 1 >= len(odom_data):
+            if i + 1 >= len(self.odom_data):
                 break
 
-            movement_data = [odom_data[i][1], odom_data[i][2], odom_data[i+1][0] - cur_action[0]]
+            movement_data = [self.odom_data[i][1], self.odom_data[i][2],
+                             self.odom_data[i+1][0] - cur_action[0]]
             self.make_move(movement_data, 1)
 
+    # Plot Odometry Data
         x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
-
 
         plt.plot(x_arr, y_arr, 'b')
 
@@ -283,6 +300,12 @@ class Robot:
 
         plt.autoscale(True)
         #plt.show()
+
+    def part_a7(self):
+        """Apply particle filter to the data"""
+
+        pass
+
 
     def show_plots(self):
         """Show all plots"""
