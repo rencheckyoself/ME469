@@ -71,13 +71,13 @@ class Robot:
         self.bar_data = load_data('ds1_Barcodes.dat', 3, 0, [0, 3])
         self.groundtruth_data = load_data('ds1_Groundtruth.dat', 3, 0, [0, 3, 5, 7])
 
-        self.initial_pos = [self.groundtruth_data[0], self.groundtruth_data[1], self.groundtruth_data[2]]
+        self.initial_pos = [self.groundtruth_data[0][1], self.groundtruth_data[0][2], self.groundtruth_data[0][3]]
         self.motion_path = [[0, 0, 0]]
         self.new_pos = [0, 0, 0]
         self.cur_pos = self.initial_pos[:]
         self.seed = 50
-        self.M = 1000
-        self.X_set = [[0, 0, 0, 0]]
+        self.M = 100
+        self.X_set = []
 
         self.found_measurements = []
 
@@ -88,7 +88,7 @@ class Robot:
         """Clear all position arrays and set new starting point"""
 
         self.initial_pos = []
-        self.motion_path = [[]]
+        self.motion_path = []
         self.new_pos = []
         self.cur_pos = []
 
@@ -102,14 +102,21 @@ class Robot:
 
         k = 0
         print "Generating particle set..."
+
         while k <= self.M:
             #x,y,theta
-            self.X_set.append([np.random.normal(self.initial_pos[0][0], 0.003),
-                               np.random.normal(self.initial_pos[0][1], 0.003),
-                               np.random.normal(self.initial_pos[0][2], 0.03),
+            self.X_set.append([np.random.normal(self.initial_pos[0], 0.0009),
+                               np.random.normal(self.initial_pos[1], 0.0009),
+                               np.random.normal(self.initial_pos[2], 0.003),
                                1/self.M,
                                k])
             k += 1
+
+
+        # x_arr, y_arr, _h, _h, _h = map(list, zip(*self.X_set))
+        #
+        # plt.figure()
+        # plt.plot(x_arr, y_arr, 'ro', markersize=2)
 
     def change_measurement_subject(self):
         """ Transform Measurement Subject from Barcode # to Subject # """
@@ -120,18 +127,21 @@ class Robot:
                     item[1] = match[0]
                     break
 
-    def make_move(self, movement_set, cur_loc, noise_check):
+    def make_move(self, movement_set, state, noise_check):
         """Used to calculate the motion model
             Function to return the next point of motion over some change in time given
             the starting point and velocities.
 
             Input Variable Syntax:
-                  movementSet = [v,w,dt]
-                  noise_check = 1 to turn on noise, else add zero noise
+              movement_set = [v,w,dt] array with the first three positions
+                                      as the control inputs and timestep
+              state = [x,y,theta] array with the first three positions as the start vaiables
+              noise_check = 1 to turn on noise, else add zero noise
 
             Output Variable:
-                  newPos = [x,y,heading] relative to the robot's domain
-                  The new position of the robot after some change in time"""
+              new_pos = [x,y,theta]
+              The new position of the robot after some change in time
+        """
 
         vel = [0, 0, 0]
 
@@ -150,27 +160,27 @@ class Robot:
         #calculate the new position
         if movement_set[1] == 0:
 
-            vel[0] = movement_set[0]*np.cos(cur_loc[2])
-            vel[1] = movement_set[0]*np.sin(cur_loc[2])
+            vel[0] = movement_set[0]*np.cos(state[2])
+            vel[1] = movement_set[0]*np.sin(state[2])
             vel[2] = movement_set[1]
 
-            for i, state in enumerate(cur_loc):
-                self.new_pos[i] = state + vel[i] * movement_set[2] + epsilon[i]
+            for i in range(3):
+                self.new_pos[i] = state[i] + vel[i] * movement_set[2] + epsilon[i]
 
         else:
 
             v_diff = movement_set[0] / movement_set[1]
 
-            print v_diff
-            print movement_set
-            print cur_loc
-
-            vel[0] = -v_diff * np.sin(cur_loc[2]) + v_diff * np.sin(cur_loc[2] + movement_set[2] * movement_set[1])
-            vel[1] = v_diff * np.cos(cur_loc[2]) - v_diff * np.cos(cur_loc[2] + movement_set[2] * movement_set[1])
+            vel[0] = -v_diff * np.sin(state[2]) + v_diff * np.sin(state[2] + movement_set[2] * movement_set[1])
+            vel[1] = v_diff * np.cos(state[2]) - v_diff * np.cos(state[2] + movement_set[2] * movement_set[1])
             vel[2] = movement_set[1] * movement_set[2]
 
-            for i, state in enumerate(cur_loc):
-                self.new_pos[i] = state + vel[i]
+
+
+            for i in range(3):
+                self.new_pos[i] = state[i] + vel[i]
+
+
 
     def append_path(self):
         """Add next discrete point to path"""
@@ -211,19 +221,19 @@ class Robot:
         return expected_value
 
     def calc_weight(self, landmark_set, particle_arr, measure_num):
+        """ Calulates the weight component of a particle for a given measurement"""
+
+        knob = [1, 1]
 
         # feed particle state through sensor model.
+        particle_meas = self.read_sensor(landmark_set, particle_arr, 0)
 
-        particle_meas = read_sensor(landmark_set, particle_arr, 1)
-
-        # compare measurements
-
+        # calculate error
         error_dist = self.found_measurements[measure_num][0] - particle_meas[0]
         error_head = self.found_measurements[measure_num][1] - particle_meas[1]
 
-        # update weight for particle
-
-        weight = abs(error_dist) + abs(error_head)
+        # determine weight
+        weight = knob[0] * abs(error_dist) + knob[1] * abs(error_head)
 
         return weight
 
@@ -242,10 +252,8 @@ class Robot:
         # motion model
         for item in enumerate(movement_data):
             # calculate new state
-            self.make_move(item[1], self.cur_pos, 0)
+            self.make_move(item[1], self.cur_pos[:], 0)
             self.cur_pos = self.new_pos[:]
-
-            print self.cur_pos
 
             self.append_path()
 
@@ -266,9 +274,8 @@ class Robot:
         self.set_initial_pos([0, 0, 0])
 
         #Part A6 Data Set
-        sub_num = [6, 13, 17]
-        marker_set = [[1.88032539, -5.57229508], [3.07964257, 0.24942861],
-                      [-1.04151642, 2.80020985]]
+        marker_set = [[6, 1.88032539, -5.57229508], [13, 3.07964257, 0.24942861],
+                      [17, -1.04151642, 2.80020985]]
 
         robot_locs = [[2, 3, 0], [0, 3, 0], [1, -2, 0]]
 
@@ -282,18 +289,18 @@ class Robot:
             self.new_pos = robot_locs[i]
 
             # calculate measurement
-            results = self.read_sensor(item, 1)
+            results = self.read_sensor(item, robot_locs[i], 1)
 
             # convert measurement to global domain
             global_results[i] = [self.new_pos[0] + np.cos(results[1]) * results[0],
                                  self.new_pos[1] + np.sin(results[1]) * results[0]]
 
             # calculate error
-            error_calc[i] = [marker_set[i][0] - global_results[i][0],
-                             marker_set[i][1] - global_results[i][1]]
+            error_calc[i] = [marker_set[i][1] - global_results[i][0],
+                             marker_set[i][2] - global_results[i][1]]
 
             # print error calculations to console
-            print "For Subject #" + str(sub_num[i]) + ":"
+            print "For Subject #" + str(marker_set[i][0]) + ":"
             print "The measured distance is " + str(results[0]) + "m and the calculated bearing is " + str(results[1]) + "rad."
             print "The error in the x direction is " + str(round(error_calc[i][0], 5))
             print "The error in the y direction is " + str(round(error_calc[i][1], 5))
@@ -346,15 +353,18 @@ class Robot:
 
         plt.autoscale(True)
 
-    def part_a7(self):
+    def part_b7(self):
         """Apply particle filter to the data"""
 
         self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
                               self.groundtruth_data[0][3]])
         last_meas = 0
         # Robot Moves - now move each particle.
-
+        i = 0
         for i, vel_data in enumerate(self.odom_data):
+            if i > 1000:
+                break
+
             if vel_data[1] == 0 and vel_data[2] == 0:
                 pass
 
@@ -369,25 +379,27 @@ class Robot:
                 # check odom timestamp against measurement timestamp and gather measurements
                 while k <= len(self.meas_data):
 
-                    # save data for later if there is a measurement between my current and future timestep
-                    if (self.meas_data[k][0] >= vel_data[0] and
+            # save data for later if there is a measurement between my current and future timestep
+                    if (self.meas_data[k][0] >= self.odom_data[i][0] and
                             self.meas_data[k][0] < self.odom_data[i+1][0]):
 
                         num_measurements += 1
-                        f = 6
 
-                        while f <= 20:
+                        f = 0
+
+                        while f <= (len(self.marker_data) - 1):
+
                             if self.marker_data[f][0] == self.meas_data[k][1]:
 
-                                self.found_measurements.append(bot_sensor_meas)
+                                self.found_measurements.append(self.meas_data[k])
                                 found_markers.append(self.marker_data[f])
                                 break
 
-                        f += 1
+                            f += 1
 
-                    if (self.meas_data[k][0] >= self.odom_data[i+1][0]):
+                    if self.meas_data[k][0] >= self.odom_data[i+1][0]:
 
-                        last_meas = k + 1
+                        last_meas = k
                         break
 
                     k += 1
@@ -396,7 +408,7 @@ class Robot:
                 for j, particle in enumerate(self.X_set):
 
                     prop_part = [vel_data[1], vel_data[2], self.odom_data[i+1][0] - vel_data[0]]
-                    self.make_move(prop_part, particle, 1)
+                    self.make_move(prop_part, particle, 0)
                     particle[0] = self.new_pos[0]
                     particle[1] = self.new_pos[1]
                     particle[2] = self.new_pos[2]
@@ -405,9 +417,9 @@ class Robot:
                     # if there was a measurement then find particle weight
                     if num_measurements > 0:
 
-                        for l, measurement in enumerate(found_measurements):
+                        for l, mark in enumerate(found_markers):
 
-                            particle[3] += self.calc_weight(measurement, particle, l)
+                            particle[3] += self.calc_weight(mark, particle, l)
 
                         #divide by total measurements
                         particle[3] = particle[3] / num_measurements
@@ -417,12 +429,22 @@ class Robot:
                 if num_measurements > 0:
 
                     #resample
+                    _ignore, _ignore, _ignore, tot_weights, part_id = map(list, zip(*self.X_set))
+
+                    np.random.choice(part_id, self.M, tot_weights)
+
 
                 #select mean of particle set and add to motion path
+                mean_vals = np.sum(self.X_set, axis=0)
+                mean_vals = np.divide(mean_vals, self.M)
 
-                np.sum            
+                self.new_pos = [mean_vals[0], mean_vals[1], mean_vals[2]]
+                self.append_path()
 
 
+        x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
+
+        plt.plot(x_arr, y_arr, 'r')
 
     def show_plots(self):
         """Show all plots"""
