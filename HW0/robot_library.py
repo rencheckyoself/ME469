@@ -75,7 +75,7 @@ class Robot:
         self.motion_path = [[0, 0, 0]]
         self.new_pos = [0, 0, 0]
         self.cur_pos = self.initial_pos[:]
-        self.M = 1000
+        self.M = 100
         self.X_set = []
 
         self.found_measurements = []
@@ -215,26 +215,31 @@ class Robot:
         return expected_value
 
     def calc_weight(self, landmark_set, particle_arr, measure_num):
-        """ Calulates the weight component of a particle for a given measurement"""
+        """ Calulates the weight component of a particle for a given measurement
 
-        co_var = np.matrix([[.01, .005], [.005, .01]])
+        Inputs: landmark_set [sub#, x, y]
+                particle_arr [x, y, theta, weight, id]
+                measure_num [int] - used to determine which row from measurement
+                                    data set should be used.
+
+        Output: w_i [float] probability of the measurement given the particle state and measurement
+        """
+
+        co_var = np.matrix([[.003, .05], [.05, .003]])
         co_varI = co_var.I
 
         # feed particle state through sensor model.
         particle_meas = self.read_sensor(landmark_set, particle_arr, 1)
 
         particle_meas = np.array(particle_meas)
-        meas_arr = np.array([self.found_measurements[measure_num][2], self.found_measurements[measure_num][3]])
+        meas_arr = np.array([self.found_measurements[measure_num][2],
+                             self.found_measurements[measure_num][3]])
 
         diff_arr = particle_meas - meas_arr
 
         diff_arr_t = diff_arr.reshape(2, 1)
 
-        a = -.5 * diff_arr * co_varI * diff_arr_t
-
-        # calculate error
-
-        w_i = float((np.linalg.det(2 * np.pi * co_var)**.5) * np.exp(a))
+        w_i = float((np.linalg.det(2 * np.pi * co_var)**.5) * np.exp(-.5 * diff_arr * co_varI * diff_arr_t))
 
         # error_dist = (self.found_measurements[measure_num][2] - particle_meas[0])**2
         #
@@ -371,7 +376,7 @@ class Robot:
         for i, vel_data in enumerate(self.odom_data):
             if i % 250 == 0:
                 print i
-            if i > 750:
+            if i > 550:
                 break
 
             if vel_data[1] == 0 and vel_data[2] == 0:
@@ -453,22 +458,15 @@ class Robot:
 
                     resamp_ids.sort()
 
-                    search = 0
                     new_x_set = []
 
-                    for p, p_id in enumerate(resamp_ids):
-                        if search >= self.M:
-                            search = self.M - 1
-                        while search <= self.M - 1:
+                    for _p, p_id in enumerate(resamp_ids):
 
-                            if self.X_set[search][4] == p_id:
-                                new_x_set.append(self.X_set[search])
+                        for _s, search in enumerate(self.X_set):
 
-                            if self.X_set[search][4] > p_id:
-                                search -= 1
+                            if search[4] == p_id:
+                                new_x_set.append(search)
                                 break
-
-                            search += 1
 
                     self.X_set = new_x_set[:]
 
@@ -476,9 +474,7 @@ class Robot:
             plt.plot(x_arr, y_arr, 'ko', markersize=2)
 
             mean_vals = np.sum(self.X_set, axis=0)
-            print mean_vals
             mean_vals = np.divide(mean_vals, self.M)
-            print mean_vals
 
             self.new_pos = [mean_vals[0], mean_vals[1], mean_vals[2]]
 
