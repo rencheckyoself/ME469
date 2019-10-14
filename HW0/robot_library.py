@@ -75,8 +75,9 @@ class Robot:
         self.motion_path = [[0, 0, 0]]
         self.new_pos = [0, 0, 0]
         self.cur_pos = self.initial_pos[:]
-        self.M = 100
+        self.M = 1000
         self.X_set = []
+        self.last_id = 0
 
         self.found_measurements = []
 
@@ -102,17 +103,18 @@ class Robot:
         k = 0
         print "Generating particle set..."
 
-        np.random.seed(50)
+        np.random.seed(40)
 
         while k <= self.M - 1:
             #x,y,theta
             self.X_set.append([np.random.normal(self.initial_pos[0], .003),
                                np.random.normal(self.initial_pos[1], .003),
-                               np.random.normal(self.initial_pos[2], .01),
-                               1/self.M,
-                               k])
+                               np.random.normal(self.initial_pos[2], .05),
+                               1/float(self.M),
+                               self.last_id])
             k += 1
 
+        self.last_id = k
 
     def change_measurement_subject(self):
         """ Transform Measurement Subject from Barcode # to Subject # """
@@ -225,27 +227,75 @@ class Robot:
         Output: w_i [float] probability of the measurement given the particle state and measurement
         """
 
-        co_var = np.matrix([[.003, .05], [.05, .003]])
-        co_varI = co_var.I
-
         # feed particle state through sensor model.
         particle_meas = self.read_sensor(landmark_set, particle_arr, 1)
 
-        particle_meas = np.array(particle_meas)
-        meas_arr = np.array([self.found_measurements[measure_num][2],
-                             self.found_measurements[measure_num][3]])
+        dis_error = (particle_meas[0] - self.found_measurements[measure_num][2])**2
+        head_error = (particle_meas[1] - self.found_measurements[measure_num][3])**2
 
-        diff_arr = particle_meas - meas_arr
+        w_i = 1/(dis_error + head_error)
 
-        diff_arr_t = diff_arr.reshape(2, 1)
-
-        w_i = float((np.linalg.det(2 * np.pi * co_var)**.5) * np.exp(-.5 * diff_arr * co_varI * diff_arr_t))
-
-        # error_dist = (self.found_measurements[measure_num][2] - particle_meas[0])**2
+        # co_var = np.matrix([[.003, .05], [.05, .003]])
+        # co_varI = co_var.I
         #
-        # error_head = (self.found_measurements[measure_num][3] - particle_meas[1])**2
+        # particle_meas = np.array(particle_meas)
+        # meas_arr = np.array([self.found_measurements[measure_num][2],
+        #                      self.found_measurements[measure_num][3]])
+        #
+        # diff_arr = particle_meas - meas_arr
+        #
+        # diff_arr_t = diff_arr.reshape(2, 1)
+        #
+        # w_i = float((np.linalg.det(2 * np.pi * co_var)**.5) * np.exp(-.5 * diff_arr * co_varI * diff_arr_t))
 
         return w_i
+
+    def low_var_resample(self):
+        """
+        Low Varience Resampling Routine
+
+        Algorithm from Probabilistic Robotics Ch.4 pg.86
+
+        """
+        new_x_set = self.X_set[:]
+
+        r = np.random.random() * 1 / float(self.M)
+        c = self.X_set[0][3]
+        I = 0
+
+
+        for m in range(self.M):
+            if m % 20 == 0:
+                new_x_set[m] = [np.random.normal(self.cur_pos[0], .00001),
+                                np.random.normal(self.cur_pos[1], .00001),
+                                np.random.normal(self.cur_pos[2], 1.5),
+                                1/(float(self.M)),
+                                self.last_id]
+
+                self.last_id += 1
+
+            else:
+                u = r + (m / (float(self.M) - 1.0))
+
+                while u > c:
+                    I += 1
+                    if I > self.M-1:
+                        I = self.M-1
+                        break
+                    c += self.X_set[I][3]
+                    #print u, c, I
+
+                new_x_set[m][:] = self.X_set[I][:]
+
+
+        _ig, _ig, _ig, w_b, _ig = map(list, zip(*new_x_set))
+
+        norm = np.sum(w_b)
+
+        for a in range(len(new_x_set)):
+            new_x_set[a][3] = new_x_set[a][3] / norm
+
+        return new_x_set[:]
 
     def part_a2(self):
         """Part A2 Routine"""
@@ -329,10 +379,10 @@ class Robot:
         plot_map(self.marker_data)
 
     # Plot Groundtruth Data
-        _ignore, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
+        gt_timestamp, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
 
-        #ground_x = ground_x[0:20000]
-        #ground_y = ground_y[0:20000]
+        ground_x = ground_x[0:20000]
+        ground_y = ground_y[0:20000]
 
         #plt.plot(ground_x[0], ground_y[0], 'kd', markersize=3, label='_nolegend_')
         plt.plot(ground_x, ground_y, 'g')
@@ -354,6 +404,9 @@ class Robot:
     # Plot Odometry Data
         x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
 
+        x_arr = x_arr[0:1700]
+        y_arr = y_arr[0:1700]
+
         plt.plot(x_arr, y_arr, 'b')
 
         plt.legend(['Landmark', 'Wall', 'Groundtruth', 'Robot Trajectory'])
@@ -371,41 +424,51 @@ class Robot:
         last_meas = 0
         total_measurements = 0
         num_measurements = 0
-        # Robot Moves - now move each particle.
+
+        dt_thresh = 1
+        iter_thresh = 1700
+        delay_thresh = 0
+        resample_delay = 0
+
+
+
         i = 0
         for i, vel_data in enumerate(self.odom_data):
-            if i % 250 == 0:
+            if i % (iter_thresh/4) == 0:
                 print i
-            if i > 550:
+            if i > iter_thresh:
                 break
 
             if vel_data[1] == 0 and vel_data[2] == 0:
+                ## modify to alway propigate particles once bugs worked out.
                 pass
 
             else:
 
                 k = last_meas
                 num_measurements = 0
-                total_q = 0
+                tot_w = 0
                 found_markers = []
                 self.found_measurements = []
 
-                # check odom timestamp against measurement timestamp and gather measurements
+                # save data for later if there is a measurement between my current and
+                # future timestep threshold
                 while k <= len(self.meas_data):
 
-            # save data for later if there is a measurement between my current and future timestep
+                    # check measurement timestamps against odom timestamp
                     if (self.meas_data[k][0] >= self.odom_data[i][0] and
-                            self.meas_data[k][0] < self.odom_data[i+3][0] and
+                            self.meas_data[k][0] < self.odom_data[i+dt_thresh][0] and
                             self.meas_data[k][1] > 5):
 
                         num_measurements += 1
-
                         total_measurements += 1
 
                         f = 0
 
+                        #search for the marker data set corresponding to the measurement found
                         while f <= (len(self.marker_data) - 1):
 
+                            #add marker set to the temporary list
                             if self.marker_data[f][0] == self.meas_data[k][1]:
 
                                 self.found_measurements.append(self.meas_data[k])
@@ -414,75 +477,78 @@ class Robot:
 
                             f += 1
 
-                    if self.meas_data[k][0] >= self.odom_data[i+1][0]:
+                    if self.meas_data[k][0] >= self.odom_data[i+dt_thresh][0]:
 
                         last_meas = k
                         break
 
                     k += 1
 
-                # propigate particles based on control
+                if num_measurements > 0:
+                    resample_delay += 1
 
-                for j, particle in enumerate(self.X_set):
+                # propigate each particle based on control
+                for j in range(len(self.X_set)):
 
                     prop_part = [vel_data[1], vel_data[2], self.odom_data[i+1][0] - vel_data[0]]
-                    self.make_move(prop_part, particle, 1)
+                    self.make_move(prop_part, self.X_set[j], 1)
 
-                    # if i >= 470:
-                    #     print i, particle
+                    self.X_set[j][0] = self.new_pos[0]
+                    self.X_set[j][1] = self.new_pos[1]
+                    self.X_set[j][2] = self.new_pos[2]
+                    self.X_set[j][3] = 1 / float(self.M)
 
-                    particle[0] = self.new_pos[0]
-                    particle[1] = self.new_pos[1]
-                    particle[2] = self.new_pos[2]
-                    particle[3] = 0
-
-                    # if there was a measurement then find particle weight
                     if num_measurements > 0:
 
                         for l, mark in enumerate(found_markers):
-                            particle[3] += self.calc_weight(mark, particle, l)
+                            self.X_set[j][3] += self.calc_weight(mark, self.X_set[j], l)
 
                         #divide by total measurements
-                        particle[3] = particle[3] / num_measurements
+                        self.X_set[j][3] = self.X_set[j][3] / num_measurements
 
-                        total_q += particle[3]
+                        tot_w += self.X_set[j][3]
 
-                if num_measurements > 0:
-
+                if num_measurements > 0 and resample_delay > delay_thresh:
                     #resample
-                    _ignore, _ignore, _ignore, tot_weights, part_id = list(map(list, zip(*self.X_set)))
 
-                    norm_weights = list(np.divide(tot_weights, total_q))
+                    for _a, adjust in enumerate(self.X_set):
+                        adjust[3] = adjust[3] / tot_w
+                        #print i, self.X_set[a][4], self.X_set[a][3]
 
-                    resamp_ids = list(np.random.choice(part_id, self.M, norm_weights))
+                    self.X_set = self.low_var_resample()
 
-                    resamp_ids.sort()
+                    resample_delay = 0
 
-                    new_x_set = []
+            # find_max = 0
+            # for max_i, values in enumerate(self.X_set):
+            #     if find_max < values[3]:
+            #         find_max = values[3]
+            #         max_index = max_i
+            #
+            # plt.plot(self.X_set[max_index][0], self.X_set[max_index][1], 'ko', markersize=3)
 
-                    for _p, p_id in enumerate(resamp_ids):
+            # x_arr, y_arr, _h, _h, _h = map(list, zip(*self.X_set))
+            # plt.plot(x_arr, y_arr, 'ko', markersize=1)
 
-                        for _s, search in enumerate(self.X_set):
+            mean_x = 0
+            mean_y = 0
+            mean_th = 0
 
-                            if search[4] == p_id:
-                                new_x_set.append(search)
-                                break
+            #Get mean weighted average for the plotting points
+            for _t, avg in enumerate(self.X_set):
+                mean_x = mean_x + avg[0] * avg[3]
+                mean_y = mean_y + avg[1] * avg[3]
+                mean_th = mean_th + avg[2] * avg[3]
 
-                    self.X_set = new_x_set[:]
-
-            x_arr, y_arr, _h, _h, _h = map(list, zip(*self.X_set))
-            plt.plot(x_arr, y_arr, 'ko', markersize=2)
-
-            mean_vals = np.sum(self.X_set, axis=0)
-            mean_vals = np.divide(mean_vals, self.M)
-
-            self.new_pos = [mean_vals[0], mean_vals[1], mean_vals[2]]
+            #print mean_x, mean_y, mean_th
+            self.new_pos = [mean_x, mean_y, mean_th]
+            self.cur_pos = [mean_x, mean_y, mean_th]
 
             self.append_path()
 
         x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
 
-        plt.plot(x_arr, y_arr, 'r', markersize=2)
+        plt.plot(x_arr, y_arr, 'r')
         plt.autoscale(True)
         print total_measurements
 
