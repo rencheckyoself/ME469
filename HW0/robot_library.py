@@ -81,6 +81,11 @@ class Robot:
 
         self.found_measurements = []
 
+        self.part_a2_path = []
+        self.part_a3_path = []
+        self.part_b7_path = []
+        self.groundtruth_path = []
+
         self.generate_particle_set()
         self.change_measurement_subject()
 
@@ -302,7 +307,6 @@ class Robot:
 
         #create Robot Object
         self.set_initial_pos([0, 0, 0])
-        plt.figure()
 
         #Part A2 Data Set
         movement_data = [[0.5, 0, 1], [0, -1/(2*np.pi), 1], [.5, 0, 1],
@@ -317,15 +321,7 @@ class Robot:
 
             self.append_path()
 
-        #Plot Data
-        x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
-
-        plt.plot(x_arr, y_arr, 'b')
-
-        plt.title('Part A.2 Results')
-        plt.xlabel('Robot X Position (m)')
-        plt.ylabel('Robot Y Position (m)')
-        plt.legend(['Robot Trajectory'])
+        self.part_a2_path = self.motion_path[:]
 
     def part_a6(self):
         """Part A6 Routine"""
@@ -349,7 +345,7 @@ class Robot:
             self.new_pos = robot_locs[i]
 
             # calculate measurement
-            results = self.read_sensor(item, robot_locs[i], 1)
+            results = self.read_sensor(item, robot_locs[i], 0)
 
             # convert measurement to global domain
             global_results[i] = [self.new_pos[0] + np.cos(results[1]) * results[0],
@@ -373,21 +369,6 @@ class Robot:
         self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
                               self.groundtruth_data[0][3]])
 
-        plt.figure()
-
-    # plot Landmarks and Walls
-        plot_map(self.marker_data)
-
-    # Plot Groundtruth Data
-        gt_timestamp, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
-
-        # ground_x = ground_x[0:20000]
-        # ground_y = ground_y[0:20000]
-
-        #plt.plot(ground_x[0], ground_y[0], 'kd', markersize=3, label='_nolegend_')
-        plt.plot(ground_x, ground_y, 'g')
-        #plt.plot(ground_x[-1], ground_y[-1], 'ko', markersize=3, label='_nolegend_')
-
     # Plot Odometry Dataset
         for i, cur_action in enumerate(self.odom_data):
 
@@ -401,20 +382,7 @@ class Robot:
             self.cur_pos = self.new_pos
             self.append_path()
 
-    # Plot Odometry Data
-        x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
-
-        # x_arr = x_arr[0:1700]
-        # y_arr = y_arr[0:1700]
-
-        plt.plot(x_arr, y_arr, 'b')
-
-        plt.legend(['Landmark', 'Wall', 'Groundtruth', 'Robot Trajectory'])
-        plt.xlabel('World X Position (m)')
-        plt.ylabel('World Y Position (m)')
-        plt.title('Odometry Data Vs. Groundtruth Data')
-
-        plt.autoscale(True)
+        self.part_a3_path = self.motion_path[:]
 
     def part_b7(self):
         """Apply particle filter to the data"""
@@ -429,8 +397,6 @@ class Robot:
         iter_thresh = len(self.odom_data) - 2
         delay_thresh = 0
         resample_delay = 0
-
-
 
         i = 0
         for i, vel_data in enumerate(self.odom_data):
@@ -549,12 +515,109 @@ class Robot:
 
             self.append_path()
 
-        x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
+        self.part_b7_path = self.motion_path[:]
+
+    def create_plots(self):
+        """
+        Create Plots for Report
+        """
+        #part_a2
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_a2_path))
+
+        plt.figure()
+        plt.plot(x_arr, y_arr, 'b')
+
+        plt.title('Part A.2 Results')
+        plt.xlabel('Robot X Position (m)')
+        plt.ylabel('Robot Y Position (m)')
+        plt.legend(['Robot Trajectory'])
+        plt.autoscale(True)
+
+        #part 3a
+        plt.figure()
+
+        plot_map(self.marker_data)
+
+        _ig, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
+
+        # ground_x = ground_x[0:20000]
+        # ground_y = ground_y[0:20000]
+
+        plt.plot(ground_x, ground_y, 'g')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_a3_path))
+
+        plt.plot(x_arr, y_arr, 'b')
+
+        plt.legend(['Landmark', 'Wall', 'Groundtruth', 'Robot Trajectory'])
+        plt.xlabel('World X Position (m)')
+        plt.ylabel('World Y Position (m)')
+        plt.title('Odometry Data Vs. Groundtruth Data')
+        plt.autoscale(True)
+
+        #part 7b - trunc.
+
+        plt.figure()
+
+        plot_map(self.marker_data)
+
+        _ig, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
+
+        ground_x = ground_x[0:20000]
+        ground_y = ground_y[0:20000]
+
+        plt.plot(ground_x, ground_y, 'g')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_a3_path))
+
+        x_arr = x_arr[0:1700]
+        y_arr = y_arr[0:1700]
+
+        plt.plot(x_arr, y_arr, 'b')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_b7_path))
+
+        x_arr = x_arr[1:1700]
+        y_arr = y_arr[1:1700]
 
         plt.plot(x_arr, y_arr, 'r')
-        plt.autoscale(True)
-        print total_measurements
 
-    def show_plots(self):
-        """Show all plots"""
+        plt.legend(['Landmark', 'Wall', 'Groundtruth', 'Robot Trajectory', 'Filter Trajectory'])
+        plt.xlabel('World X Position (m)')
+        plt.ylabel('World Y Position (m)')
+        plt.title('Filter Performance Comparison')
+        plt.autoscale(True)
+
+        #7b Full
+        plt.figure()
+
+        plot_map(self.marker_data)
+
+        _ig, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
+
+        # ground_x = ground_x[0:20000]
+        # ground_y = ground_y[0:20000]
+
+        plt.plot(ground_x, ground_y, 'g')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_a3_path))
+
+        # x_arr = x_arr[0:1700]
+        # y_arr = y_arr[0,1700]
+
+        plt.plot(x_arr, y_arr, 'b')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_b7_path))
+
+        # x_arr = x_arr[1:1700]
+        # y_arr = y_arr[1:1700]
+
+        plt.plot(x_arr, y_arr, 'r')
+
+        plt.legend(['Landmark', 'Wall', 'Groundtruth', 'Robot Trajectory', 'Filter Trajectory'])
+        plt.xlabel('World X Position (m)')
+        plt.ylabel('World Y Position (m)')
+        plt.title('Filter Performance Comparison')
+        plt.autoscale(True)
+
         plt.show()

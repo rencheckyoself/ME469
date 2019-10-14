@@ -9,8 +9,9 @@ def main():
     bot.part_a6()
     bot.part_a2()
     bot.part_a3()
-    #bot.part_b7()
+    bot.part_b7()
 
-    bot.show_plots()
+    bot.create_plots()
+
 
 main()
