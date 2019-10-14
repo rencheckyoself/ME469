@@ -84,9 +84,9 @@ class Robot:
         self.part_a2_path = []
         self.part_a3_path = []
         self.part_b7_path = []
+        self.part_b7_path_2 = []
         self.groundtruth_path = []
 
-        self.generate_particle_set()
         self.change_measurement_subject()
 
     def set_initial_pos(self, starting_point):
@@ -102,19 +102,22 @@ class Robot:
         self.new_pos = starting_point[:]
         self.cur_pos = starting_point[:]
 
-    def generate_particle_set(self):
+    def generate_particle_set(self, m_part, xy_var, th_var):
         """generate random particle set"""
 
         k = 0
+        self.M = m_part
+        self.X_set = []
+
         print "Generating particle set..."
 
         np.random.seed(40)
 
         while k <= self.M - 1:
             #x,y,theta, .003,.003,.05
-            self.X_set.append([np.random.normal(self.initial_pos[0], .003),
-                               np.random.normal(self.initial_pos[1], .003),
-                               np.random.normal(self.initial_pos[2], .05),
+            self.X_set.append([np.random.normal(self.initial_pos[0], xy_var),
+                               np.random.normal(self.initial_pos[1], xy_var),
+                               np.random.normal(self.initial_pos[2], th_var),
                                1/float(self.M),
                                self.last_id])
             k += 1
@@ -151,8 +154,8 @@ class Robot:
         # Create Noise array
         # std dev for x and y assumed to be .004m
         # std dev for theta assumed to be .05rad
-        trans_var = 0.000016
-        ang_var = 0.0025
+        trans_var = 0.1
+        ang_var = 0.5
 
         if noise_check == 1:
             epsilon = [np.random.normal(0, trans_var), np.random.normal(0, trans_var),
@@ -177,8 +180,6 @@ class Robot:
             vel[0] = -v_diff * np.sin(state[2]) + v_diff * np.sin(state[2] + movement_set[2] * movement_set[1])
             vel[1] = v_diff * np.cos(state[2]) - v_diff * np.cos(state[2] + movement_set[2] * movement_set[1])
             vel[2] = movement_set[1] * movement_set[2]
-
-
 
             for i in range(3):
                 self.new_pos[i] = state[i] + vel[i]
@@ -389,6 +390,9 @@ class Robot:
 
         self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
                               self.groundtruth_data[0][3]])
+
+        self.generate_particle_set(1000, 0.003, 0.05)
+
         last_meas = 0
         total_measurements = 0
         num_measurements = 0
@@ -518,6 +522,47 @@ class Robot:
         self.part_b7_path = self.motion_path[:]
         print "total measurements found: " + str(total_measurements)
 
+        ##PART 2 DATASET
+
+        self.set_initial_pos([0, 0, 0])
+
+        #Part A2 Data Set
+        movement_data = [[0.5, 0, 1], [0, -1/(2*np.pi), 1], [.5, 0, 1],
+                         [0, 1/(2*np.pi), 1], [.5, 0, 1]]
+
+        self.generate_particle_set(1000,.00001,.001)
+
+        for i, vel_data in enumerate(movement_data):
+
+            # propigate each particle based on control
+            for j in range(len(self.X_set)):
+
+                prop_part = [vel_data[0], vel_data[1], vel_data[2]]
+                self.make_move(prop_part, self.X_set[j], 1)
+
+                self.X_set[j][0] = self.new_pos[0]
+                self.X_set[j][1] = self.new_pos[1]
+                self.X_set[j][2] = self.new_pos[2]
+                self.X_set[j][3] = 1 / float(self.M)
+
+            mean_x = 0
+            mean_y = 0
+            mean_th = 0
+
+            #Get mean weighted average for the plotting points
+            for _t, avg in enumerate(self.X_set):
+                mean_x = mean_x + avg[0] * avg[3]
+                mean_y = mean_y + avg[1] * avg[3]
+                mean_th = mean_th + avg[2] * avg[3]
+
+            #print mean_x, mean_y, mean_th
+            self.new_pos = [mean_x, mean_y, mean_th]
+            self.cur_pos = [mean_x, mean_y, mean_th]
+
+            self.append_path()
+
+        self.part_b7_path_2 = self.motion_path
+
     def create_plots(self):
         """
         Create Plots for Report
@@ -619,6 +664,23 @@ class Robot:
         plt.xlabel('World X Position (m)')
         plt.ylabel('World Y Position (m)')
         plt.title('Filter Performance Comparison')
+        plt.autoscale(True)
+
+        #7b Full on Pt2 data
+        plt.figure()
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_a2_path))
+
+        plt.plot(x_arr, y_arr, 'b')
+
+        x_arr, y_arr, _t_arr = map(list, zip(*self.part_b7_path_2))
+
+        plt.plot(x_arr, y_arr, 'r')
+
+        plt.title('Part A.2 Results')
+        plt.xlabel('Robot X Position (m)')
+        plt.ylabel('Robot Y Position (m)')
+        plt.legend(['Robot Trajectory', 'Filter Trajectory'])
         plt.autoscale(True)
 
         plt.show()
