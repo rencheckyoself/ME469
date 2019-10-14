@@ -312,7 +312,7 @@ class Robot:
         # motion model
         for item in enumerate(movement_data):
             # calculate new state
-            self.make_move(item[1], self.cur_pos[:], 0)
+            self.make_move(item[1], self.cur_pos[:], 1)
             self.cur_pos = self.new_pos[:]
 
             self.append_path()
@@ -381,8 +381,8 @@ class Robot:
     # Plot Groundtruth Data
         gt_timestamp, ground_x, ground_y, _ground_t = map(list, zip(*self.groundtruth_data))
 
-        ground_x = ground_x[0:20000]
-        ground_y = ground_y[0:20000]
+        # ground_x = ground_x[0:20000]
+        # ground_y = ground_y[0:20000]
 
         #plt.plot(ground_x[0], ground_y[0], 'kd', markersize=3, label='_nolegend_')
         plt.plot(ground_x, ground_y, 'g')
@@ -404,8 +404,8 @@ class Robot:
     # Plot Odometry Data
         x_arr, y_arr, _t_arr = map(list, zip(*self.motion_path))
 
-        x_arr = x_arr[0:1700]
-        y_arr = y_arr[0:1700]
+        # x_arr = x_arr[0:1700]
+        # y_arr = y_arr[0:1700]
 
         plt.plot(x_arr, y_arr, 'b')
 
@@ -426,7 +426,7 @@ class Robot:
         num_measurements = 0
 
         dt_thresh = 1
-        iter_thresh = 1700
+        iter_thresh = len(self.odom_data) - 2
         delay_thresh = 0
         resample_delay = 0
 
@@ -434,8 +434,8 @@ class Robot:
 
         i = 0
         for i, vel_data in enumerate(self.odom_data):
-            if i % (iter_thresh/4) == 0:
-                print i
+            # if i % (iter_thresh/4) == 0:
+            #     print i
             if i > iter_thresh:
                 break
 
@@ -453,9 +453,12 @@ class Robot:
 
                 # save data for later if there is a measurement between my current and
                 # future timestep threshold
-                while k <= len(self.meas_data):
+
+                while k <= len(self.meas_data)-1:
 
                     # check measurement timestamps against odom timestamp
+                    if i >= len(self.odom_data)-4:
+                        dt_thresh = 0
                     if (self.meas_data[k][0] >= self.odom_data[i][0] and
                             self.meas_data[k][0] < self.odom_data[i+dt_thresh][0] and
                             self.meas_data[k][1] > 5):
