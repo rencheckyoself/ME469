@@ -111,7 +111,7 @@ class Robot:
         np.random.seed(40)
 
         while k <= self.M - 1:
-            #x,y,theta
+            #x,y,theta, .003,.003,.05
             self.X_set.append([np.random.normal(self.initial_pos[0], .003),
                                np.random.normal(self.initial_pos[1], .003),
                                np.random.normal(self.initial_pos[2], .05),
@@ -268,7 +268,7 @@ class Robot:
         c = self.X_set[0][3]
         I = 0
 
-
+        # 20, .00001, 1.5
         for m in range(self.M):
             if m % 20 == 0:
                 new_x_set[m] = [np.random.normal(self.cur_pos[0], .00001),
@@ -345,7 +345,7 @@ class Robot:
             self.new_pos = robot_locs[i]
 
             # calculate measurement
-            results = self.read_sensor(item, robot_locs[i], 0)
+            results = self.read_sensor(item, robot_locs[i], 1)
 
             # convert measurement to global domain
             global_results[i] = [self.new_pos[0] + np.cos(results[1]) * results[0],
@@ -516,6 +516,7 @@ class Robot:
             self.append_path()
 
         self.part_b7_path = self.motion_path[:]
+        print "total measurements found: " + str(total_measurements)
 
     def create_plots(self):
         """
