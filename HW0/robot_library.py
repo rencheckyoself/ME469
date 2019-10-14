@@ -148,7 +148,7 @@ class Robot:
 
         vel = [0, 0, 0]
 
-        # Create Noise Matrix
+        # Create Noise array
         # std dev for x and y assumed to be .004m
         # std dev for theta assumed to be .05rad
         trans_var = 0.000016
