@@ -154,8 +154,8 @@ class Robot:
         # Create Noise array
         # std dev for x and y assumed to be .004m
         # std dev for theta assumed to be .05rad
-        trans_var = 0.1
-        ang_var = 0.5
+        trans_var = 0.000016
+        ang_var = 0.0025
 
         if noise_check == 1:
             epsilon = [np.random.normal(0, trans_var), np.random.normal(0, trans_var),
