@@ -59,7 +59,13 @@ def plot_map(landmark_data):
 
 
 class Robot:
-    """"A Class to interact with the motion model of a robot moving in 2D space"""
+    """
+        A Class to interact with the:
+        1) motion model
+        2) measurement model
+        3) particle Filter
+         for a robot moving in 2D space
+    """
 
     def __init__(self):
 
@@ -90,7 +96,12 @@ class Robot:
         self.change_measurement_subject()
 
     def set_initial_pos(self, starting_point):
-        """Clear all position arrays and set new starting point"""
+        """
+        Clear all position arrays and set new starting point
+
+        Input: starting_point = [x,y,theta]
+
+        """
 
         self.initial_pos = []
         self.motion_path = []
@@ -103,7 +114,12 @@ class Robot:
         self.cur_pos = starting_point[:]
 
     def generate_particle_set(self, m_part, xy_var, th_var):
-        """generate random particle set"""
+        """
+        generate random particle set
+
+        m_part = number of particles
+        xy_var & th_var = variance about starting point
+        """
 
         k = 0
         self.M = m_part
@@ -144,8 +160,8 @@ class Robot:
               state = [x,y,theta] array with the first three positions as the start vaiables
               noise_check = 1 to turn on noise, else add zero noise
 
-            Output Variable:
-              new_pos = [x,y,theta]
+            Sets:
+              self.new_pos = [x,y,theta]
               The new position of the robot after some change in time
         """
 
@@ -239,7 +255,12 @@ class Robot:
         dis_error = (particle_meas[0] - self.found_measurements[measure_num][2])**2
         head_error = (particle_meas[1] - self.found_measurements[measure_num][3])**2
 
-        w_i = 1/(dis_error + head_error)
+        if (dis_error + head_error) == 0:
+            denom = .00001
+        else:
+            denom = (dis_error + head_error)
+
+        w_i = 1/float(denom)
 
         # co_var = np.matrix([[.003, .05], [.05, .003]])
         # co_varI = co_var.I
@@ -260,7 +281,11 @@ class Robot:
         """
         Low Varience Resampling Routine
 
-        Algorithm from Probabilistic Robotics Ch.4 pg.86
+        Algorithm from Probabilistic Robotics Ch.4 pg.86 slightly modified to
+        fit python
+
+        Modified to also add in random particles and renormalized the weights of the
+        resampled particle set
 
         """
         new_x_set = self.X_set[:]
@@ -364,7 +389,7 @@ class Robot:
             print "\n"
 
     def part_a3(self):
-        """Main Routine"""
+        """Part A3 Routine"""
 
     # create Robot Object
         self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
@@ -386,7 +411,7 @@ class Robot:
         self.part_a3_path = self.motion_path[:]
 
     def part_b7(self):
-        """Apply particle filter to the data"""
+        """Part B7 Routine"""
 
         self.set_initial_pos([self.groundtruth_data[0][1], self.groundtruth_data[0][2],
                               self.groundtruth_data[0][3]])
@@ -404,13 +429,11 @@ class Robot:
 
         i = 0
         for i, vel_data in enumerate(self.odom_data):
-            # if i % (iter_thresh/4) == 0:
-            #     print i
+
             if i > iter_thresh:
                 break
 
             if vel_data[1] == 0 and vel_data[2] == 0:
-                ## modify to alway propigate particles once bugs worked out.
                 pass
 
             else:
@@ -421,9 +444,8 @@ class Robot:
                 found_markers = []
                 self.found_measurements = []
 
-                # save data for later if there is a measurement between my current and
+                # find and save data for later if there is a measurement between my current and
                 # future timestep threshold
-
                 while k <= len(self.meas_data)-1:
 
                     # check measurement timestamps against odom timestamp
@@ -471,6 +493,7 @@ class Robot:
                     self.X_set[j][2] = self.new_pos[2]
                     self.X_set[j][3] = 1 / float(self.M)
 
+                    #calculate the weight if there was a measurement detected
                     if num_measurements > 0:
 
                         for l, mark in enumerate(found_markers):
@@ -481,27 +504,17 @@ class Robot:
 
                         tot_w += self.X_set[j][3]
 
+                #resample from the particle set
                 if num_measurements > 0 and resample_delay > delay_thresh:
-                    #resample
 
+                    #normalise the weights
                     for _a, adjust in enumerate(self.X_set):
                         adjust[3] = adjust[3] / tot_w
-                        #print i, self.X_set[a][4], self.X_set[a][3]
 
                     self.X_set = self.low_var_resample()
 
                     resample_delay = 0
 
-            # find_max = 0
-            # for max_i, values in enumerate(self.X_set):
-            #     if find_max < values[3]:
-            #         find_max = values[3]
-            #         max_index = max_i
-            #
-            # plt.plot(self.X_set[max_index][0], self.X_set[max_index][1], 'ko', markersize=3)
-
-            # x_arr, y_arr, _h, _h, _h = map(list, zip(*self.X_set))
-            # plt.plot(x_arr, y_arr, 'ko', markersize=1)
 
             mean_x = 0
             mean_y = 0
@@ -513,7 +526,6 @@ class Robot:
                 mean_y = mean_y + avg[1] * avg[3]
                 mean_th = mean_th + avg[2] * avg[3]
 
-            #print mean_x, mean_y, mean_th
             self.new_pos = [mean_x, mean_y, mean_th]
             self.cur_pos = [mean_x, mean_y, mean_th]
 
@@ -522,7 +534,7 @@ class Robot:
         self.part_b7_path = self.motion_path[:]
         print "total measurements found: " + str(total_measurements)
 
-        ##PART 2 DATASET
+        ##FILTER WITH PART 2 DATASET --------------------------------------------------------
 
         self.set_initial_pos([0, 0, 0])
 
@@ -555,7 +567,6 @@ class Robot:
                 mean_y = mean_y + avg[1] * avg[3]
                 mean_th = mean_th + avg[2] * avg[3]
 
-            #print mean_x, mean_y, mean_th
             self.new_pos = [mean_x, mean_y, mean_th]
             self.cur_pos = [mean_x, mean_y, mean_th]
 

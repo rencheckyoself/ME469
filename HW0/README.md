@@ -9,4 +9,4 @@ Instructions:
    and results printing.
 
 3) Run run_me.py file making sure the terminal is set to the directory containing the script and data to view the results for each question.
-      -Run time is less than 10s (at least in my experience)
+      -Run time is about 4min (at least in my experience)
