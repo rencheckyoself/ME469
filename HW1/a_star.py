@@ -63,7 +63,6 @@ class Node(object):
         self.y_pos_w = y_pos #world y_pos
         self.x_pos_g = 0 #grid x_pos
         self.y_pos_g = 0 #grid y_pos
-        self.on_fin_path = 0 #final path flag
 
 
     def __lt__(self, other):
@@ -86,10 +85,8 @@ class AStar(object):
 
         self.goal_node = Node(0, None, goal_coord[0], goal_coord[1])
         self.goal_node.x_pos_g, self.y_pos_g = self.field.get_grid_index(self.goal_node.x_pos_w, self.goal_node.y_pos_w)
-        self.goal_node.on_fin_path = 1
 
         self.start_node = Node(1, None, start_coord[0], start_coord[1])
-        self.start_node.on_fin_path = 1
         self.start_node.x_pos_g, self.start_node.y_pos_g = self.field.get_grid_index(self.start_node.x_pos_w, self.start_node.y_pos_w)
 
         self.next_id = 2
@@ -99,32 +96,43 @@ class AStar(object):
 
         heapq.heapify(self.open_list)
 
-    #    self.find_path()
+        result = self.find_path()
 
-    # Plot all nodes function
-    # Plot final path function
+        # Plot all nodes function
+        self.plot_closed_list()
+
+        # Plot final path function
+        if result == 1:
+            self.plot_final_path()
+        else:
+            print "Did not find the goal. Output code " + str(result)
+
 
     def find_path(self):
         """
         A* Search Algorithm
         """
 
-        eval_node = heapq.heappop(self.open_list)
 
         found_end = 0
 
         while found_end == 0:
-        #check if current node is the goal
-            if (eval_node.x_pos == self.goal_node.x_pos and
-                    eval_node.y_pos == self.goal_node.y_pos):
 
+            if len(self.open_list) == 0:
+                found_end == 2
+
+            eval_node = heapq.heappop(self.open_list)
+
+        #check if current node is the goal
+            if self.check_for_goal(eval_node):
                 found_end = 1
+                self.closed_list.append(eval_node)
             else:
 
                 self.closed_list.append(eval_node)
-
                 self.analyze_neighbors(eval_node)
 
+        return found_end
 
     def analyze_neighbors(self, cur_node):
         """
@@ -149,9 +157,9 @@ class AStar(object):
 
                 #check if node is out of bounds, if so skip over
                 elif (pot_node_x_w < self.field.x_axis[0] or
-                        pot_node_x_w > self.field.x_axis[1] or
-                        pot_node_y_w < self.field.y_axis[0] or
-                        pot_node_y_w < self.field.y_axis[1]):
+                      pot_node_x_w > self.field.x_axis[1] or
+                      pot_node_y_w < self.field.y_axis[0] or
+                      pot_node_y_w < self.field.y_axis[1]):
 
                     skip = 1
 
@@ -190,10 +198,17 @@ class AStar(object):
                         # create a new node
                         nei_node = Node(self.next_id, cur_node.node_id, pot_node_x_w, pot_node_y_w)
 
+                        if check_for_goal(nei_node):
+                            nei_node = self.goal_node
+
                         nei_node.x_pos_g, nei_node.y_pos_g = self.field.get_grid_index(nei_node.x_pos_w, nei_node.y_pos_w)
 
                         nei_node.g_val = self.calc_g(nei_node, cur_node, x, y)
+                        nei_node.h_val = self.calc_h(nei_node)
+                        nei_node.f_val = nei_node.g_val + nei_node.h_val
 
+                        self.next_id += 1
+                        heapq.heappush(self.open_list, nei_node)
 
     def calc_g(self, node_new, node_cur, shift_x, shift_y):
         """
@@ -206,6 +221,68 @@ class AStar(object):
             g_new = node_cur.g_val + 1000
 
         return g_new
+
+    def calc_h(self, node_new):
+        """
+        Calculate hueristic
+        """
+
+        x_diff = self.goal_node.x_pos_w - node_new.x_pos_w
+        y_diff = self.goal_node.y_pos_w - node_new.y_pos_w
+
+        h_new = x_diff**2 + y_diff**2
+
+        return h_new
+
+    def check_for_goal(self,node):
+        if (self.goal_node.x_pos_w == node.x_pos_w and
+            self.goal_node.y_pos_w == node.y_pos_w):
+
+            check = True
+        else:
+            check = False
+
+        return check
+
+    def plot_closed_list(self):
+        """
+        Plot all nodes analyzed
+        """
+        x_arr = np.zeros(len(self.closed_list))
+        y_arr = x_arr[:]
+
+        for n_i, node in enumerate(self.closed_list):
+            x_arr[n_i] = node.x_pos_w
+            y_arr[n_i] = node.y_pos_w
+
+        plt.plot(x_arr, y_arr, 'ko', markersize=3)
+
+    def plot_final_path(self):
+
+        x_arr = [self.goal_node.x_pos_w]
+        y_arr = [self.goal_node.y_pos_w]
+
+        next_par_id = self.goal_node.parent_id
+
+        while next_par_id is not None:
+
+            match_found = 0
+            # find node
+            while match_found == 0:
+
+                for _ig, node in enumerate(self.closed_list):
+
+                    if node.node_id == next_par_id:
+                        x_arr.append(node.x_pos_w)
+                        y_arr.append(node.y_pos_w)
+                        next_par_id = node.parent_id
+
+                        break
+
+        plt.plot(x_arr, y_arr, 'ro-', markersize=4, linewidth=2)
+
+    def plot_show(self):
+        plt.show()
 
 class Grid(object):
     """
