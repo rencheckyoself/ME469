@@ -46,11 +46,6 @@ def plot_map(landmark_data):
 
     ax.plot(land_x, land_y, 'bo', markersize=3)
 
-    # cirx = plt.gca()
-    #
-    # for _i, marker in enumerate(landmark_data):
-    #     cirx.add_patch(plt.Circle((marker[1],marker[2]), radius=.3))
-
 class Node(object):
     """
     Node object to store data of an individual node
@@ -69,7 +64,6 @@ class Node(object):
 
         self.sort_val = self.f_val + self.h_val #sort value to optimize heap
 
-
     def __lt__(self, other):
         return self.sort_val < other.sort_val
 
@@ -77,9 +71,13 @@ class AStar(object):
     """
     contains logic for A* algoritim
     """
-    def __init__(self, start_coord, goal_coord, cell_size, inflate):
+    def __init__(self, start_coord, goal_coord, cell_size, inflate, online_check):
+
+        print "Planning for path from " + str(start_coord) + " to " + str(goal_coord)
 
         self.field = Grid(cell_size, inflate)
+
+        self.online = online_check
 
         self.odom_data = load_data('ds1_Odometry.dat', 3, 0, [0, 4, 5])
         self.meas_data = load_data('ds1_Measurement.dat', 3, 0, [0, 4, 6, 7])
@@ -113,7 +111,6 @@ class AStar(object):
 
         else:
             print "Did not find the goal. Output code " + str(result)
-
 
     def find_path(self):
         """
@@ -160,7 +157,7 @@ class AStar(object):
         y_search = x_search[:]
 
 
-        print cur_node.node_id
+        # print cur_node.node_id
         #look at all 8 neighbor nodes
         for _ig, x in enumerate(x_search):
             for _ig, y in enumerate(y_search):
@@ -207,7 +204,7 @@ class AStar(object):
                         temp_g = self.calc_g(open_node, cur_node, x, y)
 
                         if temp_g < open_node.g_val:
-                            print "modified node " + str(open_node.node_id)
+                            # print "modified node " + str(open_node.node_id)
                             open_node.g_val = temp_g
                             open_node.f_val = open_node.g_val + open_node.h_val
                             open_node.sort_val = open_node.f_val + open_node.h_val
@@ -238,13 +235,19 @@ class AStar(object):
 
                     heapq.heappush(self.open_list, nei_node)
 
+        if self.online == 1:
+            best_nei = heapq.heappop(self.open_list)
+            self.open_list = []
+
+            heapq.heappush(self.open_list, best_nei)
+
     def calc_g(self, node_new, node_cur, shift_x, shift_y):
         """
         Calculate true cost, g
         """
 
         if self.field.cell_cost[node_new.x_pos_g, node_new.y_pos_g] != 1000:
-            g_new = node_cur.g_val + ((shift_x / self.field.cell_size)**2 + (shift_y / self.field.cell_size)**2)
+            g_new = node_cur.g_val + ((shift_x)**2 + (shift_y)**2)
         else:
             g_new = node_cur.g_val + 1000
 
@@ -255,10 +258,14 @@ class AStar(object):
         Calculate hueristic
         """
 
-        x_diff = self.goal_loc_w[0] - node_new.x_pos_w
-        y_diff = self.goal_loc_w[1] - node_new.y_pos_w
+        x_diff = abs(self.goal_loc_w[0] - node_new.x_pos_w)
+        y_diff = abs(self.goal_loc_w[1] - node_new.y_pos_w)
 
-        h_new = round(x_diff**2 + y_diff**2, 2)
+        # Diagonal
+        # h_new = (x_diff + y_diff) + (2**.5 - 2) * min(x_diff, y_diff)
+
+        # Modified Euclidean
+        h_new = (x_diff**2 + y_diff**2)
 
         return h_new
 
@@ -287,7 +294,7 @@ class AStar(object):
             for cl_i, node in enumerate(self.closed_list):
                 x_arr[index] = node.x_pos_w
                 y_arr[index] = node.y_pos_w
-                index = cl_i + 1
+                index = cl_i
 
             for ol_i, node in enumerate(self.open_list):
                 x_arr[index] = node.x_pos_w
