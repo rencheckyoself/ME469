@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import heapq
 from pprint import pprint
+
+plt.ion()
+
 def load_data(file_name, header, footer, cols):
     """Loads in data from a text file
        Function to import data from a file
@@ -23,28 +26,8 @@ def load_data(file_name, header, footer, cols):
     return data
 
 def plot_show():
+    plt.ioff()
     plt.show()
-
-def plot_map(landmark_data):
-    """Plots the Landmarks Locations and Walls
-
-       Input:
-             landmark_data: list of landmark_data formatted like the original .dat file
-
-       Output:
-              None. Adds Landmark and walls to final plot"""
-
-    # parse landmark data to plot
-    _ignore, land_x, land_y, _ignore, _ignore = map(list, zip(*landmark_data))
-
-    # # add landmark labels
-    # for _a, item in enumerate(landmark_data):
-    #     plt.annotate('%s' %item[0], xy=(item[1], item[2]), xytext=(3, 3),
-    #                  textcoords='offset points')
-
-    fig, ax = plt.subplots()
-
-    ax.plot(land_x, land_y, 'bo', markersize=3)
 
 class Node(object):
     """
@@ -90,8 +73,11 @@ class AStar(object):
 
         self.goal_node = None
 
+        self.fin_path = [None]
+
         self.start_node = Node(0, None, start_coord[0], start_coord[1])
-        self.start_node.x_pos_g, self.start_node.y_pos_g = self.field.get_grid_index(self.start_node.x_pos_w, self.start_node.y_pos_w)
+        self.start_node.x_pos_g, self.start_node.y_pos_g = self.field.get_grid_index(
+            self.start_node.x_pos_w, self.start_node.y_pos_w)
 
         self.next_id = 1
 
@@ -107,10 +93,11 @@ class AStar(object):
 
         # Plot final path function
         if result == 1:
+            plt.title("Path From " + str(start_coord) + " To " + str(goal_coord))
             self.plot_final_path()
 
         else:
-            print "Did not find the goal. Output code " + str(result)
+            plt.title("Did not find the goal")
 
     def find_path(self):
         """
@@ -303,6 +290,9 @@ class AStar(object):
 
         plt.plot(x_arr, y_arr, 'ko', markersize=1)
 
+        plt.arrow(x_arr[1], y_arr[1], 0, .001, head_width = .15)
+        self.field.fig.canvas.draw()
+
     def plot_final_path(self):
         """
         plot the final path
@@ -313,6 +303,8 @@ class AStar(object):
 
         next_par_id = self.goal_node.parent_id
 
+        self.fin_path = [self.goal_node]
+
         while next_par_id is not None:
 
             for _ig, node in enumerate(self.closed_list):
@@ -322,9 +314,12 @@ class AStar(object):
                     x_arr.append(node.x_pos_w)
                     y_arr.append(node.y_pos_w)
                     next_par_id = node.parent_id
+                    self.fin_path.append(node)
                     continue
 
+        self.fin_path.reverse()
         plt.plot(x_arr, y_arr, 'ro-', markersize=2, linewidth=2)
+        self.field.fig.canvas.draw()
 
 class Grid(object):
     """
@@ -366,19 +361,33 @@ class Grid(object):
 
                     self.cell_cost[mark_x][mark_y] = 1000
 
-        plot_map(self.marker_data)
+        # parse landmark data to plot
+        _ignore, land_x, land_y, _ignore, _ignore = map(list, zip(*self.marker_data))
+
+        # # add landmark labels
+        # for _a, item in enumerate(landmark_data):
+        #     plt.annotate('%s' %item[0], xy=(item[1], item[2]), xytext=(3, 3),
+        #                  textcoords='offset points')
+
+        self.fig, self.ax = plt.subplots()
+
+        plt.plot(land_x, land_y, 'bo', markersize=3)
 
         plt.xticks(np.arange(self.x_axis[0], self.x_axis[1]+self.cell_size, 1))
         # plt.xticks(np.arange(self.x_axis[0], self.x_axis[1]+self.cell_size, .1))
         plt.yticks(np.arange(self.y_axis[0], self.y_axis[1]+self.cell_size, 1))
         # plt.yticks(np.arange(self.y_axis[0], self.y_axis[1]+self.cell_size, .1))
 
-        plt.imshow(self.cell_cost.T, cmap="Set3", origin='lower', extent=[-2, 5, -6, 6])
+        plt.imshow(self.cell_cost.T, cmap="Purples", origin='lower', extent=[-2, 5, -6, 6])
 
         plt.grid(which="major", color='k', linewidth=1)
         plt.grid(which="minor", color='-k')
 
+        plt.ylabel("World Y Position (m)")
+        plt.xlabel("World X Position (m)")
         plt.axis([-2, 5, -6, 6])
+
+        self.fig.canvas.draw()
 
     def get_grid_index(self, data_set_x, data_set_y):
         """
@@ -401,3 +410,141 @@ class Grid(object):
                 grid_y = y
 
         return grid_x, grid_y
+
+class Robot(object):
+    """
+    Class to control the robot simulation
+    """
+
+    def __init__(self, start_loc, goal_loc, final_path=None, grid_obj=None):
+
+        if final_path == None:
+            self.cur_state = [start_loc[0], start_loc[0], (3*np.pi)/2]
+            self.target_state = self.cur_state[:]
+            self.path = []
+            self.tracking = -1
+            self.goal_state = goal_loc[:]
+        else:
+            self.cur_state = [final_path[0].x_pos_w, final_path[0].y_pos_w, (3*np.pi)/2]
+            self.target_state = self.cur_state[:]
+            self.goal_state = [final_path[-1].x_pos_w, final_path[-1].y_pos_w]
+            self.path = final_path
+            self.tracking = 0
+
+        self.vel = [0, 0]
+
+        self.acc_lim = [0.288, 5.579] # m/s^2, rad/sec^2
+
+        self.th_thresh = .08 #5 degrees
+        self.d_thresh = .05 #in meters
+
+        self.k_th = 1
+        self.k_d = 1
+        self.dt = 0.1
+
+        if grid_obj == None:
+            self.grid = Grid(.1, .3)
+        else:
+            self.grid = grid_obj
+
+        self.go_to_goal()
+
+    def find_target(self):
+
+        if self.tracking == -1:
+            #Run analyze neighbors Function
+
+            #check for goal
+
+            #set 'arrived'
+
+            pass
+        else:
+            self.tracking += 1
+
+            if self.tracking >= len(self.path):
+                arrived = 1
+
+            else:
+                arrived = 0
+                self.target_state = [self.path[self.tracking].x_pos_w,
+                                     self.path[self.tracking].y_pos_w]
+
+        return arrived
+
+    def go_to_goal(self):
+        """
+        Send a veloctiy command and update the position
+        """
+        goal_check = 0
+
+        while goal_check == 0:
+
+            prev_vel = [self.vel[0], self.vel[1]]
+
+            x_dist = self.target_state[0] - self.cur_state[0]
+            y_dist = self.target_state[1] - self.cur_state[1]
+
+            delta_th = np.arctan2(y_dist, x_dist) - self.cur_state[2]
+            delta_d = (x_dist**2 + y_dist**2)**.5
+
+            print self.tracking
+
+            print "Diff in Heading: " + str(delta_th)
+            print "Diff in Distance: " + str(delta_d)
+
+            if delta_d <= self.d_thresh:
+
+                goal_check = self.find_target()
+
+                x_dist = self.target_state[0] - self.cur_state[0]
+                y_dist = self.target_state[1] - self.cur_state[1]
+
+                delta_th = np.arctan2(y_dist, x_dist) - self.cur_state[2]
+                delta_d = (x_dist**2 + y_dist**2)**.5
+
+
+            else:
+                #check if within theta threshhold to drive forward
+                if abs(delta_th) < self.th_thresh:
+
+                    #calculate the linear veloctiy command
+                    eps = np.random.normal(0, .5)
+                    self.vel[0] = self.k_d * delta_d + eps
+                    self.vel[1] = 0
+
+                    if (self.vel[0] - prev_vel[0]) / self.dt > .9 * self.acc_lim[0]:
+                        self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+
+                #otherwise turn first
+                else:
+
+                    # remap difference in heading to turn the shortest direction
+                    if delta_th > np.pi:
+                        delta_th = (delta_th - np.pi) * 1
+                    elif delta_th < -np.pi:
+                        delta_th = (delta_th + np.pi) * 1
+
+                    #calculate the angular veloctiy command
+                    eps = np.random.normal(0, .1)
+                    self.vel[1] = self.k_th * delta_th + eps
+                    self.vel[0] = 0
+
+                    # check if the velocity command is within the acceleration limit.
+                    if (self.vel[1] - prev_vel[1]) / self.dt > .9 * self.acc_lim[1]:
+                        self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+
+                #plot current position
+                self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], 0, 0)
+                self.grid.fig.canvas.draw()
+
+                # print self.cur_state
+
+                #send velocity command and calculate new position
+                self.cur_state[0] = (self.cur_state[0] + self.vel[0] *
+                                     np.cos(self.cur_state[2]) * self.dt)
+
+                self.cur_state[1] = (self.cur_state[1] + self.vel[0] *
+                                     np.sin(self.cur_state[2]) * self.dt)
+
+                self.cur_state[2] = self.cur_state[2] + self.vel[1] * self.dt
