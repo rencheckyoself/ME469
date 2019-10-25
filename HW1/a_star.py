@@ -290,7 +290,6 @@ class AStar(object):
 
         plt.plot(x_arr, y_arr, 'ko', markersize=1)
 
-        plt.arrow(x_arr[1], y_arr[1], 0, .001, head_width = .15)
         self.field.fig.canvas.draw()
 
     def plot_final_path(self):
@@ -418,7 +417,7 @@ class Robot(object):
 
     def __init__(self, start_loc, goal_loc, final_path=None, grid_obj=None):
 
-        if final_path == None:
+        if final_path is None:
             self.cur_state = [start_loc[0], start_loc[0], (3*np.pi)/2]
             self.target_state = self.cur_state[:]
             self.path = []
@@ -435,14 +434,14 @@ class Robot(object):
 
         self.acc_lim = [0.288, 5.579] # m/s^2, rad/sec^2
 
-        self.th_thresh = .08 #5 degrees
+        self.th_thresh = .16 #10 degrees
         self.d_thresh = .05 #in meters
 
-        self.k_th = 1
-        self.k_d = 1
+        self.k_th = .3
+        self.k_d = .05
         self.dt = 0.1
 
-        if grid_obj == None:
+        if grid_obj is None:
             self.grid = Grid(.1, .3)
         else:
             self.grid = grid_obj
@@ -485,13 +484,12 @@ class Robot(object):
             x_dist = self.target_state[0] - self.cur_state[0]
             y_dist = self.target_state[1] - self.cur_state[1]
 
-            delta_th = np.arctan2(y_dist, x_dist) - self.cur_state[2]
-            delta_d = (x_dist**2 + y_dist**2)**.5
+            delta_th = round(np.arctan2(y_dist, x_dist) - self.cur_state[2], 3)
+            delta_d = round((x_dist**2 + y_dist**2)**.5, 3)
 
             print self.tracking
 
-            print "Diff in Heading: " + str(delta_th)
-            print "Diff in Distance: " + str(delta_d)
+            # print "Diff in Distance: " + str(delta_d)
 
             if delta_d <= self.d_thresh:
 
@@ -505,40 +503,59 @@ class Robot(object):
 
 
             else:
-                #check if within theta threshhold to drive forward
+
                 if abs(delta_th) < self.th_thresh:
+                    self.k_d = 1
+                else:
+                    self.k_d = .05
+
+                #remap difference in heading to turn the shortest direction
+
+                # print "Diff in Heading: " + str(delta_th)
+
+                #check if within theta threshhold to drive forward
+                # if abs(delta_th) < self.th_thresh:
 
                     #calculate the linear veloctiy command
-                    eps = np.random.normal(0, .5)
-                    self.vel[0] = self.k_d * delta_d + eps
-                    self.vel[1] = 0
+                eps = 0 #np.random.normal(0, .5)
+                self.vel[0] = self.k_d * delta_d + eps
+                # self.vel[1] = 0
 
-                    if (self.vel[0] - prev_vel[0]) / self.dt > .9 * self.acc_lim[0]:
-                        self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+                if (self.vel[0] - prev_vel[0]) / self.dt > .9 * self.acc_lim[0]:
+                    self.vel[0] = prev_vel[0] + .9 * self.dt * self.acc_lim[0]
+
+                if (self.vel[0] - prev_vel[0]) / self.dt < -.9 * self.acc_lim[0]:
+                    self.vel[0] = prev_vel[0] - .9 * self.dt * self.acc_lim[0]
 
                 #otherwise turn first
-                else:
+                # else:
 
-                    # remap difference in heading to turn the shortest direction
-                    if delta_th > np.pi:
-                        delta_th = (delta_th - np.pi) * 1
-                    elif delta_th < -np.pi:
-                        delta_th = (delta_th + np.pi) * 1
+                if delta_th >= np.pi:
+                    delta_th = (delta_th - np.pi) * -1
+                elif delta_th <= -np.pi:
+                    delta_th = (delta_th + np.pi) * -1
 
-                    #calculate the angular veloctiy command
-                    eps = np.random.normal(0, .1)
-                    self.vel[1] = self.k_th * delta_th + eps
-                    self.vel[0] = 0
+                #calculate the angular veloctiy command
+                eps = 0# np.random.normal(0, .001)
+                self.vel[1] = self.k_th * delta_th + eps
+                # self.vel[0] = 0
 
-                    # check if the velocity command is within the acceleration limit.
-                    if (self.vel[1] - prev_vel[1]) / self.dt > .9 * self.acc_lim[1]:
-                        self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+                # check if the velocity command is within the acceleration limit.
+                if (self.vel[1] - prev_vel[1]) / self.dt > .9 * self.acc_lim[1]:
+                    self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+
+                elif (self.vel[1] - prev_vel[1]) / self.dt < -.9 * self.acc_lim[1]:
+                    self.vel[1] = prev_vel[1] - .9 * self.dt * self.acc_lim[1]
 
                 #plot current position
-                self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], 0, 0)
+
+                arrow_x = .001*np.cos(self.cur_state[2])
+                arrow_y = .001*np.sin(self.cur_state[2])
+
+                self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], arrow_x, arrow_y, head_width =.1)
                 self.grid.fig.canvas.draw()
 
-                # print self.cur_state
+                print delta_d, delta_th, self.vel[0], self.vel[1]
 
                 #send velocity command and calculate new position
                 self.cur_state[0] = (self.cur_state[0] + self.vel[0] *
