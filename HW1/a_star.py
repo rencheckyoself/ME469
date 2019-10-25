@@ -45,7 +45,7 @@ class Node(object):
         self.x_pos_g = 0 #grid x_pos
         self.y_pos_g = 0 #grid y_pos
 
-        self.sort_val = self.f_val + self.h_val #sort value to optimize heap
+        self.sort_val = (self.f_val, self.h_val) #sort value to optimize heap
 
     def __lt__(self, other):
         return self.sort_val < other.sort_val
@@ -86,6 +86,10 @@ class AStar(object):
 
         heapq.heapify(self.open_list)
 
+    def start_planning(self):
+        """
+        Plan the path.
+        """
         result = self.find_path()
 
         # Plot all nodes function
@@ -93,7 +97,9 @@ class AStar(object):
 
         # Plot final path function
         if result == 1:
-            plt.title("Path From " + str(start_coord) + " To " + str(goal_coord))
+
+            plt.title("Path From " + str([self.start_node.x_pos_w, self.start_node.y_pos_w]) +
+                      " To " + str(self.goal_loc_w))
             self.plot_final_path()
 
         else:
@@ -142,7 +148,6 @@ class AStar(object):
         """
         x_search = [-self.field.cell_size, 0, self.field.cell_size]
         y_search = x_search[:]
-
 
         # print cur_node.node_id
         #look at all 8 neighbor nodes
@@ -194,7 +199,7 @@ class AStar(object):
                             # print "modified node " + str(open_node.node_id)
                             open_node.g_val = temp_g
                             open_node.f_val = open_node.g_val + open_node.h_val
-                            open_node.sort_val = open_node.f_val + open_node.h_val
+                            open_node.sort_val = (open_node.f_val, open_node.h_val)
                             open_node.parent_id = cur_node.node_id
 
                         if match_found == 1:
@@ -211,7 +216,7 @@ class AStar(object):
                     nei_node.h_val = self.calc_h(nei_node)
                     nei_node.f_val = round(nei_node.g_val + nei_node.h_val, 2)
 
-                    nei_node.sort_val = round(nei_node.f_val + nei_node.h_val, 2)
+                    nei_node.sort_val = (nei_node.f_val, nei_node.h_val)
 
                     self.next_id += 1
 
@@ -234,7 +239,7 @@ class AStar(object):
         """
 
         if self.field.cell_cost[node_new.x_pos_g, node_new.y_pos_g] != 1000:
-            g_new = node_cur.g_val + ((shift_x)**2 + (shift_y)**2)
+            g_new = node_cur.g_val + ((shift_x)**2 + (shift_y)**2)**.5
         else:
             g_new = node_cur.g_val + 1000
 
@@ -249,10 +254,10 @@ class AStar(object):
         y_diff = abs(self.goal_loc_w[1] - node_new.y_pos_w)
 
         # Diagonal
-        # h_new = (x_diff + y_diff) + (2**.5 - 2) * min(x_diff, y_diff)
+        h_new = (x_diff + y_diff) + (1 -2) * min(x_diff, y_diff)
 
-        # Modified Euclidean
-        h_new = (x_diff**2 + y_diff**2)
+        # Euclidean
+        # h_new = (x_diff**2 + y_diff**2)**.5
 
         return h_new
 
@@ -262,7 +267,6 @@ class AStar(object):
         """
         if(self.goal_loc_w[0] == node.x_pos_w and
            self.goal_loc_w[1] == node.y_pos_w):
-
             check = True
         else:
             check = False
