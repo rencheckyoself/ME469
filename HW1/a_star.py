@@ -1,9 +1,10 @@
 """ hi """
 from __future__ import division
 import numpy as np
-import matplotlib.pyplot as plt
 import heapq
+import time
 from pprint import pprint
+import matplotlib.pyplot as plt
 
 plt.ion()
 
@@ -70,6 +71,7 @@ class AStar(object):
         self.node_master_list = np.empty((len(self.field.x_lim + 1) * len(self.field.y_lim + 1), 7))
 
         self.goal_loc_w = goal_coord
+        self.goal_loc_g = self.field.get_grid_index(self.goal_loc_w[0], self.goal_loc_w[1])
 
         self.goal_node = None
 
@@ -239,7 +241,7 @@ class AStar(object):
         """
 
         if self.field.cell_cost[node_new.x_pos_g, node_new.y_pos_g] != 1000:
-            g_new = node_cur.g_val + ((shift_x)**2 + (shift_y)**2)**.5
+            g_new = node_cur.g_val + ((shift_x / self.field.cell_size)**2 + (shift_y / self.field.cell_size)**2)**.5
         else:
             g_new = node_cur.g_val + 1000
 
@@ -250,11 +252,11 @@ class AStar(object):
         Calculate hueristic
         """
 
-        x_diff = abs(self.goal_loc_w[0] - node_new.x_pos_w)
-        y_diff = abs(self.goal_loc_w[1] - node_new.y_pos_w)
+        x_diff = abs(self.goal_loc_g[0] - node_new.x_pos_g)
+        y_diff = abs(self.goal_loc_g[1] - node_new.y_pos_g)
 
         # Diagonal
-        h_new = (x_diff + y_diff) + (1 -2) * min(x_diff, y_diff)
+        h_new = (x_diff + y_diff) + (1 - 2) * min(x_diff, y_diff)
 
         # Euclidean
         # h_new = (x_diff**2 + y_diff**2)**.5
@@ -436,13 +438,15 @@ class Robot(object):
 
         self.vel = [0, 0]
 
+        self.robot_path = [self.cur_state[:]]
+
         self.acc_lim = [0.288, 5.579] # m/s^2, rad/sec^2
 
         self.th_thresh = .16 #10 degrees
         self.d_thresh = .05 #in meters
 
-        self.k_th = .3
-        self.k_d = .05
+        self.k_th = .5
+        self.k_d = .1
         self.dt = 0.1
 
         if grid_obj is None:
@@ -488,12 +492,12 @@ class Robot(object):
             x_dist = self.target_state[0] - self.cur_state[0]
             y_dist = self.target_state[1] - self.cur_state[1]
 
+            # print self.cur_state[2], np.arctan2(y_dist, x_dist)
+
             delta_th = round(np.arctan2(y_dist, x_dist) - self.cur_state[2], 3)
             delta_d = round((x_dist**2 + y_dist**2)**.5, 3)
 
-            print self.tracking
-
-            # print "Diff in Distance: " + str(delta_d)
+            # print self.tracking
 
             if delta_d <= self.d_thresh:
 
@@ -502,28 +506,21 @@ class Robot(object):
                 x_dist = self.target_state[0] - self.cur_state[0]
                 y_dist = self.target_state[1] - self.cur_state[1]
 
-                delta_th = np.arctan2(y_dist, x_dist) - self.cur_state[2]
-                delta_d = (x_dist**2 + y_dist**2)**.5
-
+                delta_th = round(np.arctan2(y_dist, x_dist) - self.cur_state[2], 3)
+                delta_d = round((x_dist**2 + y_dist**2)**.5, 3)
 
             else:
 
-                if abs(delta_th) < self.th_thresh:
-                    self.k_d = 1
-                else:
-                    self.k_d = .05
-
-                #remap difference in heading to turn the shortest direction
+                # if abs(delta_th) < self.th_thresh:
+                #     self.k_d = 1
+                # else:
+                #     self.k_d = .05
 
                 # print "Diff in Heading: " + str(delta_th)
 
-                #check if within theta threshhold to drive forward
-                # if abs(delta_th) < self.th_thresh:
-
-                    #calculate the linear veloctiy command
+                #calculate the linear veloctiy command
                 eps = 0 #np.random.normal(0, .5)
                 self.vel[0] = self.k_d * delta_d + eps
-                # self.vel[1] = 0
 
                 if (self.vel[0] - prev_vel[0]) / self.dt > .9 * self.acc_lim[0]:
                     self.vel[0] = prev_vel[0] + .9 * self.dt * self.acc_lim[0]
@@ -531,18 +528,15 @@ class Robot(object):
                 if (self.vel[0] - prev_vel[0]) / self.dt < -.9 * self.acc_lim[0]:
                     self.vel[0] = prev_vel[0] - .9 * self.dt * self.acc_lim[0]
 
-                #otherwise turn first
-                # else:
-
-                if delta_th >= np.pi:
-                    delta_th = (delta_th - np.pi) * -1
-                elif delta_th <= -np.pi:
-                    delta_th = (delta_th + np.pi) * -1
+                #remap difference in heading to turn the shortest direction
+                if delta_th > np.pi:
+                    delta_th = (delta_th - 2*np.pi) * -1
+                elif delta_th < -np.pi:
+                    delta_th = (delta_th + 2*np.pi) * -1
 
                 #calculate the angular veloctiy command
                 eps = 0# np.random.normal(0, .001)
                 self.vel[1] = self.k_th * delta_th + eps
-                # self.vel[0] = 0
 
                 # check if the velocity command is within the acceleration limit.
                 if (self.vel[1] - prev_vel[1]) / self.dt > .9 * self.acc_lim[1]:
@@ -551,15 +545,16 @@ class Robot(object):
                 elif (self.vel[1] - prev_vel[1]) / self.dt < -.9 * self.acc_lim[1]:
                     self.vel[1] = prev_vel[1] - .9 * self.dt * self.acc_lim[1]
 
-                #plot current position
+                # print self.tracking, delta_d, delta_th, self.vel[0], self.vel[1]
 
-                arrow_x = .001*np.cos(self.cur_state[2])
-                arrow_y = .001*np.sin(self.cur_state[2])
 
-                self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], arrow_x, arrow_y, head_width =.1)
-                self.grid.fig.canvas.draw()
+                # arrow_x = .001*np.cos(self.cur_state[2])
+                # arrow_y = .001*np.sin(self.cur_state[2])
+                # self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], arrow_x, arrow_y, head_width=.1, zorder=1)
+                #
+                # plt.pause(.01)
 
-                print delta_d, delta_th, self.vel[0], self.vel[1]
+                # self.grid.fig.canvas.draw()
 
                 #send velocity command and calculate new position
                 self.cur_state[0] = (self.cur_state[0] + self.vel[0] *
@@ -569,3 +564,17 @@ class Robot(object):
                                      np.sin(self.cur_state[2]) * self.dt)
 
                 self.cur_state[2] = self.cur_state[2] + self.vel[1] * self.dt
+
+                self.robot_path.append(self.cur_state[:])
+
+        self.plot_robot_traj()
+
+    def plot_robot_traj(self):
+        """Plot the final robot trajectory"""
+
+        for _ig, state in enumerate(self.robot_path):
+            arrow_x = .001*np.cos(state[2])
+            arrow_y = .001*np.sin(state[2])
+            self.grid.ax.arrow(state[0], state[1], arrow_x, arrow_y, head_width=.1, zorder=5)
+
+        self.grid.fig.canvas.draw()

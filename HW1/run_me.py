@@ -37,7 +37,7 @@ def main():
     path7_3.start_planning()
 
     # Part 9
-    # a_star.Robot([2.45, -3.55], [0.95, -1.55], final_path=path1.fin_path, grid_obj=path1.field)
+    # a_star.Robot([2.45, -3.55], [0.95, -1.55], final_path=path7_1.fin_path, grid_obj=path7_1.field)
 
     a_star.plot_show()
 
