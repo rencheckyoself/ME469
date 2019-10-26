@@ -55,11 +55,14 @@ class AStar(object):
     """
     contains logic for A* algoritim
     """
-    def __init__(self, start_coord, goal_coord, cell_size, inflate, online_check):
+    def __init__(self, start_coord, goal_coord, cell_size, inflate, online_check=1, robot_check=0, grid_obj=None):
 
         print "Planning for path from " + str(start_coord) + " to " + str(goal_coord)
 
-        self.field = Grid(cell_size, inflate)
+        if robot_check == 0:
+            self.field = Grid(cell_size, inflate)
+        else:
+            self.field = grid_obj
 
         self.online = online_check
 
@@ -421,14 +424,22 @@ class Robot(object):
     Class to control the robot simulation
     """
 
-    def __init__(self, start_loc, goal_loc, final_path=None, grid_obj=None):
+    def __init__(self, start_loc, goal_loc, final_path=None, grid_obj=None, cell_size=.1, inflate=.3):
+
+        if grid_obj is None:
+            self.grid = Grid(cell_size, inflate)
+        else:
+            self.grid = grid_obj
 
         if final_path is None:
-            self.cur_state = [start_loc[0], start_loc[0], (3*np.pi)/2]
+            self.cur_state = [start_loc[0], start_loc[1], (3*np.pi)/2]
             self.target_state = self.cur_state[:]
             self.path = []
             self.tracking = -1
             self.goal_state = goal_loc[:]
+            self.astar = AStar(start_loc, goal_loc, cell_size, inflate, robot_check=1, grid_obj=self.grid)
+            self.robot_target_node = heapq.heappop(self.astar.open_list)
+            self.astar.closed_list.append(self.robot_target_node)
         else:
             self.cur_state = [final_path[0].x_pos_w, final_path[0].y_pos_w, (3*np.pi)/2]
             self.target_state = self.cur_state[:]
@@ -442,30 +453,37 @@ class Robot(object):
 
         self.acc_lim = [0.288, 5.579] # m/s^2, rad/sec^2
 
-        self.th_thresh = .16 #10 degrees
-        self.d_thresh = .05 #in meters
+        self.th_thresh = .08 #10 degrees
+        self.d_thresh = .025 #in meters
 
         self.k_th = .5
-        self.k_d = .1
+        self.k_d = .05
         self.dt = 0.1
-
-        if grid_obj is None:
-            self.grid = Grid(.1, .3)
-        else:
-            self.grid = grid_obj
 
         self.go_to_goal()
 
     def find_target(self):
+        """ Determine the next target node"""
 
         if self.tracking == -1:
-            #Run analyze neighbors Function
 
-            #check for goal
+            #check if current target the robot has just arrived at is the goal
+            if self.astar.check_for_goal(self.robot_target_node) == 1:
+                arrived = 1
 
-            #set 'arrived'
+            else:
 
-            pass
+                # analyze neighbor nodes and add the lowest cost to open list
+                self.astar.analyze_neighbors(self.robot_target_node)
+
+                # retrive result form neighbor analysis and set target state
+                self.robot_target_node = heapq.heappop(self.astar.open_list)
+                self.astar.closed_list.append(self.robot_target_node)
+                self.target_state = [self.robot_target_node.x_pos_w,
+                                     self.robot_target_node.y_pos_w]
+
+                # print self.target_state
+                arrived = 0
         else:
             self.tracking += 1
 
@@ -506,53 +524,52 @@ class Robot(object):
                 x_dist = self.target_state[0] - self.cur_state[0]
                 y_dist = self.target_state[1] - self.cur_state[1]
 
-                delta_th = round(np.arctan2(y_dist, x_dist) - self.cur_state[2], 3)
+                delta_th = round(np.arctan2(y_dist, x_dist) - self.cur_state[2], 1)
                 delta_d = round((x_dist**2 + y_dist**2)**.5, 3)
 
             else:
 
                 # if abs(delta_th) < self.th_thresh:
-                #     self.k_d = 1
+                #     self.k_d = 0.01
                 # else:
-                #     self.k_d = .05
+                #     self.k_d = 0.01
 
                 # print "Diff in Heading: " + str(delta_th)
 
                 #calculate the linear veloctiy command
-                eps = 0 #np.random.normal(0, .5)
+                eps = np.random.normal(0, .001)
                 self.vel[0] = self.k_d * delta_d + eps
 
-                if (self.vel[0] - prev_vel[0]) / self.dt > .9 * self.acc_lim[0]:
-                    self.vel[0] = prev_vel[0] + .9 * self.dt * self.acc_lim[0]
+                if (self.vel[0] - prev_vel[0]) / self.dt > self.acc_lim[0]:
+                    self.vel[0] = prev_vel[0] + self.dt * self.acc_lim[0]
 
-                if (self.vel[0] - prev_vel[0]) / self.dt < -.9 * self.acc_lim[0]:
-                    self.vel[0] = prev_vel[0] - .9 * self.dt * self.acc_lim[0]
+                elif (self.vel[0] - prev_vel[0]) / self.dt < -self.acc_lim[0]:
+                    self.vel[0] = prev_vel[0] - self.dt * self.acc_lim[0]
 
                 #remap difference in heading to turn the shortest direction
-                if delta_th > np.pi:
-                    delta_th = (delta_th - 2*np.pi) * -1
-                elif delta_th < -np.pi:
-                    delta_th = (delta_th + 2*np.pi) * -1
+                if delta_th >= (7*np.pi/6):
+                    delta_th = delta_th - 2*np.pi
+                elif delta_th < -(7*np.pi/6):
+                    delta_th = delta_th + 2*np.pi
 
                 #calculate the angular veloctiy command
-                eps = 0# np.random.normal(0, .001)
+                eps = np.random.normal(0, .0001)
                 self.vel[1] = self.k_th * delta_th + eps
 
                 # check if the velocity command is within the acceleration limit.
-                if (self.vel[1] - prev_vel[1]) / self.dt > .9 * self.acc_lim[1]:
-                    self.vel[1] = prev_vel[1] + .9 * self.dt * self.acc_lim[1]
+                if (self.vel[1] - prev_vel[1]) / self.dt > self.acc_lim[1]:
+                    self.vel[1] = prev_vel[1] + self.dt * self.acc_lim[1]
 
-                elif (self.vel[1] - prev_vel[1]) / self.dt < -.9 * self.acc_lim[1]:
-                    self.vel[1] = prev_vel[1] - .9 * self.dt * self.acc_lim[1]
+                elif (self.vel[1] - prev_vel[1]) / self.dt < -self.acc_lim[1]:
+                    self.vel[1] = prev_vel[1] - self.dt * self.acc_lim[1]
 
                 # print self.tracking, delta_d, delta_th, self.vel[0], self.vel[1]
 
-
                 # arrow_x = .001*np.cos(self.cur_state[2])
                 # arrow_y = .001*np.sin(self.cur_state[2])
-                # self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], arrow_x, arrow_y, head_width=.1, zorder=1)
+                # self.grid.ax.arrow(self.cur_state[0], self.cur_state[1], arrow_x, arrow_y, head_width=.1, zorder=5)
                 #
-                # plt.pause(.01)
+                # plt.pause(.001)
 
                 # self.grid.fig.canvas.draw()
 
