@@ -544,8 +544,8 @@ class Robot(object):
         self.th_thresh = .08 #radians
         self.d_thresh = .025 #meters
 
-        self.k_th = .5 #proportional gain for turning
-        self.k_d = .05 #proportional gain for moving forward
+        self.k_th = 3 #proportional gain for turning
+        self.k_d = .1 #proportional gain for moving forward
 
         self.dt = 0.1 #timestep
 
