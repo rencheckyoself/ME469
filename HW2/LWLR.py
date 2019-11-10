@@ -33,8 +33,12 @@ class DataCreation(object):
 
         self.fin_arr = np.zeros([len(self.odom_data),7])
 
-        self.output_file = open('total_data.csv', 'wb')
-        self.writer = csv.writer(self.output_file)
+        self.matched_data = open('matched_data.csv', 'wb')
+        self.calced_data = open('calc_data.csv', 'wb')
+        self.write_matched_data = csv.writer(self.matched_data)
+        self.write_calced_data = csv.writer(self.calced_data)
+
+        self.time_proxitiy = 0.25
 
     def match_data(self):
 
@@ -69,7 +73,7 @@ class DataCreation(object):
 
             time_diff = buf[i][3] - buf[i][0]
 
-            if time_diff > .25:
+            if time_diff > self.time_proxitiy:
                 buf = np.delete(buf, i, 0)
             else:
                 # time_comp.append(time_diff)
@@ -80,59 +84,129 @@ class DataCreation(object):
         self.fin_arr = np.copy(buf)
 
     def calc_state_change(self):
+        """
+
+        Assumptions:
+            The groundtruth state was recorded at the time the control was sent.
+
+        """
+
+
         ext = np.zeros([len(self.fin_arr),5])
         i = 0
-        min_dth = 0
+
         while i < len(ext)-1:
 
             ext[i][0] = self.fin_arr[i][1]
             ext[i][1] = self.fin_arr[i][2]
-            ext[i][2] = self.fin_arr[i+1][4] - self.fin_arr[i][4]
-            ext[i][3] = self.fin_arr[i+1][5] - self.fin_arr[i][5]
-            ext[i][4] = self.fin_arr[i+1][6] - self.fin_arr[i][6]
+            ext[i][2] = (self.fin_arr[i+1][4] - self.fin_arr[i][4]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
+            ext[i][3] = (self.fin_arr[i+1][5] - self.fin_arr[i][5]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
+            ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6])
 
             if ext[i][4] >= np.pi:
                 ext[i][4] -= np.pi
             elif ext[i][4] <= -np.pi:
                 ext[i][4] += np.pi
 
-            if min_dth > ext[i][4]:
-                min_dth = ext[i][4]
-                check = i
+            ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
 
             i += 1
+            self.write_calced_data.writerow(ext[i])
 
-        print max(self.fin_arr[0:,6]), min(self.fin_arr[0:,6])
-
-        print i, min_dth
+        w = ext[0:,1]
+        v = ext[0:,0]
+        x = ext[0:,2]
+        y = ext[0:,3]
+        th = ext[0:,4]
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(ext[0:,0], ext[0:,1], zs=ext[0:,2])
+        ax.scatter(v, w, zs=x)
         plt.xlabel('v')
         plt.ylabel('w')
         plt.title('x-pos')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(ext[0:,0], ext[0:,1], zs=ext[0:,3])
+        ax.scatter(v, th, zs=x)
+        plt.xlabel('v')
+        plt.ylabel('w')
+        plt.title('x-pos')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(v, w, zs=y)
         plt.xlabel('v')
         plt.ylabel('w')
         plt.title('y-pos')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(ext[0:,0], ext[0:,1], zs=ext[0:,4])
+        ax.scatter(v, self.fin_arr[0:,6], zs=y)
+        plt.xlabel('v')
+        plt.ylabel('th')
+        plt.title('y-pos')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(v, w, zs=th)
         plt.xlabel('v')
         plt.ylabel('w')
         plt.title('th-pos')
 
-        plt.show()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(v,x, 'bo')
+        plt.xlabel('v')
+        plt.ylabel('x')
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w,x, 'bo')
+        plt.xlabel('w')
+        plt.ylabel('x')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(v,y, 'bo')
+        plt.xlabel('v')
+        plt.ylabel('y')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w,y, 'bo')
+        plt.xlabel('w')
+        plt.ylabel('y')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(v,th, 'bo')
+        plt.xlabel('v')
+        plt.ylabel('th')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w,th,'bo')
+        plt.xlabel('w')
+        plt.ylabel('th')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(x,self.fin_arr[0:,6], 'bo')
+        plt.xlabel('x')
+        plt.ylabel('th')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(y,self.fin_arr[0:,6], 'bo')
+        plt.xlabel('y')
+        plt.ylabel('th')
+
+        plt.show()
 
     def print_csv(self):
         for _ig, row in enumerate(self.fin_arr):
-            self.writer.writerow(row)
+            self.write_matched_data.writerow(row)
 
     def get_nearest_index(self, time_value):
         """
