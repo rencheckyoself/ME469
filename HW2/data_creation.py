@@ -26,7 +26,9 @@ def load_data(file_name, header, footer, cols):
 
 
 class DataCreation(object):
-
+    """
+    Class to create training data set for ML task
+    """
     def __init__(self):
         self.odom_data = load_data('ds1_Odometry.dat', 3, 0, [0, 4, 5])
         self.groundtruth_data = load_data('ds1_Groundtruth.dat', 3, 0, [0, 3, 5, 7])
@@ -34,14 +36,18 @@ class DataCreation(object):
         self.fin_arr = np.zeros([len(self.odom_data),7])
 
         self.matched_data = open('matched_data.csv', 'wb')
-        self.calced_data = open('calc_data.csv', 'wb')
-        self.write_matched_data = csv.writer(self.matched_data)
-        self.write_calced_data = csv.writer(self.calced_data)
+        self.calced_data = open('learned_data.csv', 'wb')
+        self.write_matched_data = csv.writer(self.matched_data, delimiter=" ")
+        self.write_calced_data = csv.writer(self.calced_data, delimiter=" ")
 
-        self.time_proxitiy = 0.25
+        # threshold for acceptable time difference
+        self.time_proxitiy = 0.05
 
     def match_data(self):
-
+        """
+        Matches command data point to groundtruth data points and compiles
+        info into one matrix
+        """
         time_diff = np.zeros(len(self.odom_data))
         for i, row in enumerate(self.fin_arr):
 
@@ -61,9 +67,11 @@ class DataCreation(object):
             row[5] = data_row[2]
             row[6] = data_row[3]
 
+        self.clean_for_dt()
+
     def clean_for_dt(self):
         """
-        Only keep points with a groundtruth pose within .25 of the control.
+        Only keep points with a groundtruth pose within .05 of the control.
         """
         buf = np.copy(self.fin_arr)
         # time_comp = []
@@ -110,8 +118,9 @@ class DataCreation(object):
 
             ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
 
-            i += 1
             self.write_calced_data.writerow(ext[i])
+
+            i += 1
 
         w = ext[0:,1]
         v = ext[0:,0]
@@ -210,15 +219,13 @@ class DataCreation(object):
 
     def get_nearest_index(self, time_value):
         """
-        Binary search function
+        Binary search function to match data points
         """
-        n = len(self.groundtruth_data)
-
         lower = 0
-        upper = n-1
+        upper = len(self.groundtruth_data)-1
 
         while (upper - lower > 1):
-            mid = (upper + lower) >> 1 # get the midpoint
+            mid = (upper + lower) >> 1 # get the midpoint rounded down
 
             if (time_value >= self.groundtruth_data[mid][0]):
                 lower = mid
@@ -230,19 +237,6 @@ class DataCreation(object):
 def main():
     a = DataCreation()
     a.match_data()
-    a.clean_for_dt()
-    a.print_csv()
     a.calc_state_change()
 
-
-
-
-
 main()
-# Check that each control has a unique GT pose ID
-
-# Calculate the difference in pose information from the previous command
-
-# plot v x w x x
-# plot v x w x y
-# plot w x th
