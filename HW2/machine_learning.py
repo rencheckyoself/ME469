@@ -5,7 +5,7 @@ class LWLR(object):
     """
     Class to handle LWLR learning for given data set.
     """
-    def __init__(self, data_x, data_y):
+    def __init__(self, data_x, data_y, h):
         self.training_data_x = data_x
         self.training_data_y = data_y
 
@@ -15,7 +15,7 @@ class LWLR(object):
         self.beta = self.determine_beta()
 
         # self.p = 2 # kernal function exp
-        self.h = .1 # bandwidth
+        self.h = h # bandwidth
 
     def determine_beta(self):
 

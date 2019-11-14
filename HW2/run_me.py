@@ -8,7 +8,7 @@ def part_a():
     """
     Function to test the performance of a learning algoithm using a sine wave
     """
-    noise_var = .1
+    noise_var = .25
     N = 500 # Number of data points
 
     # Generate training data for a sine wave
@@ -24,8 +24,9 @@ def part_a():
     test_data_x = np.hstack([test_data_x, np.ones([test_data_x.shape[0],1])])
     test_data_pred_w = np.zeros([N,1])
     test_data_pred_uw = np.zeros([N,1])
+
     # Initialize LWLR Object
-    ML = machine_learning.LWLR(training_data_x, training_data_y)
+    ML = machine_learning.LWLR(training_data_x, training_data_y, 0.4)
 
     # make predictions for each test data point
     for y, x in enumerate(test_data_x):
@@ -40,6 +41,7 @@ def part_a():
     plt.title("LWLR Test and Comparison")
     plt.xlabel("x")
     plt.ylabel("sin(x)")
+    plt.legend(["Training Data", "Weighted Predictions", "Unweighted Predictions"])
     plt.show()
 
 def main():
