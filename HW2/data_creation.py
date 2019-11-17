@@ -35,9 +35,7 @@ class DataCreation(object):
 
         self.fin_arr = np.zeros([len(self.odom_data),7])
 
-        self.matched_data = open('matched_data.csv', 'wb')
         self.calced_data = open('learned_data.csv', 'wb')
-        self.write_matched_data = csv.writer(self.matched_data, delimiter=" ")
         self.write_calced_data = csv.writer(self.calced_data, delimiter=" ")
 
         # threshold for acceptable time difference
@@ -100,23 +98,32 @@ class DataCreation(object):
         """
 
 
-        ext = np.zeros([len(self.fin_arr),5])
+        ext = np.zeros([len(self.fin_arr), 9])
+        header = ["v", "w", "dx", "dy", "dz", "dt", "x", "y", "th"]
+        self.write_calced_data.writerow(header)
+
         i = 0
 
         while i < len(ext)-1:
 
-            ext[i][0] = self.fin_arr[i][1]
-            ext[i][1] = self.fin_arr[i][2]
-            ext[i][2] = (self.fin_arr[i+1][4] - self.fin_arr[i][4]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
-            ext[i][3] = (self.fin_arr[i+1][5] - self.fin_arr[i][5]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
-            ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6])
+            dt = (self.fin_arr[i+1][0] - self.fin_arr[i][0])
+
+            ext[i][0] = self.fin_arr[i][1] #v
+            ext[i][1] = self.fin_arr[i][2] #w
+            ext[i][2] = (self.fin_arr[i+1][4] - self.fin_arr[i][4]) / dt #dx
+            ext[i][3] = (self.fin_arr[i+1][5] - self.fin_arr[i][5]) / dt #dy
+            ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6]) #dth
+            ext[i][5] = dt
+            ext[i][6] = self.fin_arr[i][4] #x
+            ext[i][7] = self.fin_arr[i][5] #y
+            ext[i][8] = self.fin_arr[i][6] #th
 
             if ext[i][4] >= np.pi:
                 ext[i][4] -= np.pi
             elif ext[i][4] <= -np.pi:
                 ext[i][4] += np.pi
 
-            ext[i][4] = (self.fin_arr[i+1][6] - self.fin_arr[i][6]) / (self.fin_arr[i+1][0] - self.fin_arr[i][0])
+            ext[i][4] = ext[i][4] / dt #dth
 
             self.write_calced_data.writerow(ext[i])
 
@@ -128,88 +135,97 @@ class DataCreation(object):
         y = ext[0:,3]
         th = ext[0:,4]
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(v, w, zs=x)
-        plt.xlabel('v')
-        plt.ylabel('w')
-        plt.title('x-pos')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.scatter(v, w, zs=x)
+        # plt.xlabel('v')
+        # plt.ylabel('w')
+        # plt.title('x-pos')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(v, th, zs=x)
+        ax.scatter(v, self.fin_arr[0:,6], zs=x)
         plt.xlabel('v')
-        plt.ylabel('w')
-        plt.title('x-pos')
+        plt.ylabel('th')
+        plt.title('dx')
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(v, w, zs=y)
-        plt.xlabel('v')
-        plt.ylabel('w')
-        plt.title('y-pos')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.scatter(v, w, zs=y)
+        # plt.xlabel('v')
+        # plt.ylabel('w')
+        # plt.title('y-pos')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(v, self.fin_arr[0:,6], zs=y)
         plt.xlabel('v')
         plt.ylabel('th')
-        plt.title('y-pos')
+        plt.title('dy')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(v, w, zs=th)
         plt.xlabel('v')
         plt.ylabel('w')
-        plt.title('th-pos')
+        ax.set_zlabel('dth')
+        ax.set_zlim(-5, 5)
 
         fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(v,x, 'bo')
-        plt.xlabel('v')
-        plt.ylabel('x')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(w,x, 'bo')
-        plt.xlabel('w')
-        plt.ylabel('x')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(v,y, 'bo')
-        plt.xlabel('v')
-        plt.ylabel('y')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(w,y, 'bo')
-        plt.xlabel('w')
-        plt.ylabel('y')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(v,th, 'bo')
-        plt.xlabel('v')
-        plt.ylabel('th')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(w,th,'bo')
-        plt.xlabel('w')
-        plt.ylabel('th')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(x,self.fin_arr[0:,6], 'bo')
-        plt.xlabel('x')
-        plt.ylabel('th')
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(y,self.fin_arr[0:,6], 'bo')
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(self.fin_arr[0:,5], w, zs=th)
         plt.xlabel('y')
-        plt.ylabel('th')
+        plt.ylabel('w')
+        ax.set_zlabel('dth')
+        ax.set_zlim(-5, 5)
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(v,x, 'bo')
+        # plt.xlabel('v')
+        # plt.ylabel('dx')
+        #
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(w,x, 'bo')
+        # plt.xlabel('w')
+        # plt.ylabel('dx')
+        #
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(v,y, 'bo')
+        # plt.xlabel('v')
+        # plt.ylabel('dy')
+        #
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(w,y, 'bo')
+        # plt.xlabel('w')
+        # plt.ylabel('dy')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(v, th, 'bo')
+        plt.xlabel('v')
+        plt.ylabel('dth')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w, th,'bo')
+        plt.xlabel('w')
+        plt.ylabel('dth')
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(x,self.fin_arr[0:,6], 'bo')
+        # plt.xlabel('dx')
+        # plt.ylabel('th')
+        #
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(y,self.fin_arr[0:,6], 'bo')
+        # plt.xlabel('dy')
+        # plt.ylabel('th')
 
         plt.show()
 

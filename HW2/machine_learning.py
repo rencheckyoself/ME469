@@ -1,5 +1,23 @@
 import numpy as np
 
+# import data and assign each control and GT data point a unique ID
+def load_data(file_name, header, footer, cols):
+    """Loads in data from a text file
+       Function to import data from a file
+
+       Input:
+            file_name = Full file names
+            header = number of header rows starting from 0
+            footer = number of footer rows starting from 0
+            cols = select the columns with useful data. set to None for all columns
+
+       Output:
+            data = list type of data from file.
+       Files must be in same directory as the python file."""
+
+    data = np.genfromtxt(file_name, skip_header=header, skip_footer=footer,
+                         names=True, dtype=None, delimiter=' ', usecols=cols)
+    return data
 
 class LWLR(object):
     """
@@ -38,11 +56,12 @@ class LWLR(object):
         Calculate the weighted prediction for a given query array
         """
         W_matrix = self.get_weight_matrix(query)
+
         Z_matrix = np.dot(W_matrix, self.training_data_x)
         V_matrix = np.dot(W_matrix, self.training_data_y)
 
         buf = np.dot(Z_matrix.T, Z_matrix)
-        buf = np.linalg.inv(buf)
+        buf = np.linalg.pinv(buf)
         buf = np.dot(query.T, buf)
         buf = np.dot(buf,Z_matrix.T)
         wprediction = np.dot(buf,V_matrix)
