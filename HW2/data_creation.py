@@ -35,7 +35,7 @@ class DataCreation(object):
 
         self.fin_arr = np.zeros([len(self.odom_data),7])
 
-        self.calced_data = open('learned_data.csv', 'wb')
+        self.calced_data = open('learning_dataset.csv', 'wb')
         self.write_calced_data = csv.writer(self.calced_data, delimiter=" ")
 
         # threshold for acceptable time difference
@@ -125,7 +125,19 @@ class DataCreation(object):
 
             ext[i][4] = ext[i][4] / dt #dth
 
-            self.write_calced_data.writerow(ext[i])
+            # account for removed data
+            if dt <= .5:
+                self.write_calced_data.writerow(ext[i])
+            else:
+                ext[i][0] = 0
+                ext[i][1] = 0
+                ext[i][2] = 0
+                ext[i][3] = 0
+                ext[i][4] = 0
+                ext[i][5] = 0
+                ext[i][6] = 0
+                ext[i][7] = 0
+                ext[i][8] = 0
 
             i += 1
 
@@ -134,34 +146,39 @@ class DataCreation(object):
         x = ext[0:,2]
         y = ext[0:,3]
         th = ext[0:,4]
+        dt = ext[0:,5]
 
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.scatter(v, w, zs=x)
-        # plt.xlabel('v')
-        # plt.ylabel('w')
-        # plt.title('x-pos')
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(v, w, zs=x)
+        plt.xlabel('v')
+        plt.ylabel('w')
+        ax.set_zlabel('dx')
+        plt.title('Change in x')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(v, self.fin_arr[0:,6], zs=x)
         plt.xlabel('v')
         plt.ylabel('th')
-        plt.title('dx')
+        ax.set_zlabel('dx')
+        plt.title('Change in x')
 
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.scatter(v, w, zs=y)
-        # plt.xlabel('v')
-        # plt.ylabel('w')
-        # plt.title('y-pos')
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(v, w, zs=y)
+        plt.xlabel('v')
+        plt.ylabel('w')
+        ax.set_zlabel('dy')
+        plt.title('Change in y')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(v, self.fin_arr[0:,6], zs=y)
         plt.xlabel('v')
         plt.ylabel('th')
-        plt.title('dy')
+        ax.set_zlabel('dy')
+        plt.title('Change in y')
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -169,45 +186,60 @@ class DataCreation(object):
         plt.xlabel('v')
         plt.ylabel('w')
         ax.set_zlabel('dth')
+        plt.title("Change in theta")
         ax.set_zlim(-5, 5)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(self.fin_arr[0:,5], w, zs=th)
-        plt.xlabel('y')
+        ax.scatter(self.fin_arr[0:,6], w, zs=th)
+        plt.xlabel('th')
         plt.ylabel('w')
         ax.set_zlabel('dth')
-        ax.set_zlim(-5, 5)
+        plt.title("Change in theta")
+        ax.set_zlim(-1, 1)
 
         # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(v,x, 'bo')
-        # plt.xlabel('v')
-        # plt.ylabel('dx')
-        #
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(w,x, 'bo')
-        # plt.xlabel('w')
-        # plt.ylabel('dx')
-        #
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(v,y, 'bo')
-        # plt.xlabel('v')
-        # plt.ylabel('dy')
-        #
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(w,y, 'bo')
-        # plt.xlabel('w')
-        # plt.ylabel('dy')
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.scatter(self.fin_arr[0:,5], w, zs=th)
+        # plt.xlabel('y')
+        # plt.ylabel('w')
+        # ax.set_zlabel('dth')
+        # ax.set_zlim(-5, 5)
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.plot(v, th, 'bo')
+        ax.plot(v,x, 'bo')
         plt.xlabel('v')
-        plt.ylabel('dth')
+        plt.ylabel('dx')
+        plt.title("Linear Vel. vs. Change in x")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w,x, 'bo')
+        plt.xlabel('w')
+        plt.ylabel('dx')
+        plt.title("Angular Vel. vs. Change in x")
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(v,y, 'bo')
+        plt.xlabel('v')
+        plt.ylabel('dy')
+        plt.title("Linear Vel. vs. Change in y")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(w,y, 'bo')
+        plt.xlabel('w')
+        plt.ylabel('dy')
+        plt.title("Angular Vel. vs. Change in y")
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.plot(v, th, 'bo')
+        # plt.xlabel('v')
+        # plt.ylabel('dth')
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -215,19 +247,19 @@ class DataCreation(object):
         plt.xlabel('w')
         plt.ylabel('dth')
 
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(x,self.fin_arr[0:,6], 'bo')
-        # plt.xlabel('dx')
-        # plt.ylabel('th')
-        #
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(y,self.fin_arr[0:,6], 'bo')
-        # plt.xlabel('dy')
-        # plt.ylabel('th')
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(x,self.fin_arr[0:,6], 'bo', markersize=2)
+        plt.xlabel('dx')
+        plt.ylabel('th')
+        plt.title("Change in x vs. Heading")
 
-        plt.show()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(y,self.fin_arr[0:,6], 'bo', markersize=2)
+        plt.xlabel('dy')
+        plt.ylabel('th')
+        plt.title("Change in y vs. Heading")
 
     def print_csv(self):
         for _ig, row in enumerate(self.fin_arr):
@@ -254,5 +286,6 @@ def main():
     a = DataCreation()
     a.match_data()
     a.calc_state_change()
+    plt.show()
 
 main()

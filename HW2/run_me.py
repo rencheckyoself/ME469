@@ -94,123 +94,170 @@ def part_a_3D():
     plt.ylabel("x2")
     plt.legend(["Training Data", "Weighted Predictions", "Unweighted Predictions"])
 
-def part_b():
 
-    learned_data = machine_learning.load_data("learned_data.csv", 0, 0, None)
+class HW2(object):
+    def __init__(self, N_test, offset):
 
-    x_data_file = open('x_data.csv', 'wb')
-    write_x_data = csv.writer(x_data_file, delimiter=" ")
+        self.learned_data = machine_learning.load_data("learning_dataset.csv", 0, 0, None)
+        self.N_test = N_test
+        self.N_train = self.learned_data.shape[0] - self.N_test
+        self.offset = offset # int(self.learned_data.shape[0] * np.random.rand(1)
+        self.h = .06
 
-    y_data_file = open('y_data.csv', 'wb')
-    write_y_data = csv.writer(y_data_file, delimiter=" ")
+    def part_b(self):
 
-    th_data_file = open('th_data.csv', 'wb')
-    write_th_data = csv.writer(th_data_file, delimiter=" ")
+        x_data_file = open('x_data.csv', 'wb')
+        write_x_data = csv.writer(x_data_file, delimiter=" ")
 
-    N_test = 200
-    N_train = learned_data.shape[0] - N_test
+        y_data_file = open('y_data.csv', 'wb')
+        write_y_data = csv.writer(y_data_file, delimiter=" ")
 
-    # split up total data set for training and testing
-    training_ldata = np.zeros([N_train, len(learned_data[0])])
-    test_ldata = np.zeros([N_test, len(learned_data[0])])
+        th_data_file = open('th_data.csv', 'wb')
+        write_th_data = csv.writer(th_data_file, delimiter=" ")
 
-    # convert to arrays and split data
-    offset = 5000
-    for i, row in enumerate(learned_data):
-        for j, col in enumerate(row):
+        test_inputs_file = open('test_input.csv', 'wb')
+        write_test_inputs = csv.writer(test_inputs_file, delimiter=" ")
 
-            if i < offset:
-                training_ldata[i][j] = col
-            elif i >= offset and i < offset + N_test:
-                test_ldata[i - offset][j] = col
-            else:
-                arr_row = i - N_test
-                training_ldata[arr_row][j] = col
+        # split up total data set for training and testing
+        training_ldata = np.zeros([self.N_train, len(self.learned_data[0])])
+        test_ldata = np.zeros([self.N_test, len(self.learned_data[0])])
 
-    # Create training data sets for LWLR
-    v  = np.reshape(training_ldata[0:, 0], (N_train, 1))
-    w  = np.reshape(training_ldata[0:, 1], (N_train, 1))
-    x  = np.reshape(training_ldata[0:, 6], (N_train, 1))
-    th = np.reshape(training_ldata[0:, 8], (N_train, 1))
+        # convert to arrays and split data
+        for i, row in enumerate(self.learned_data):
+            for j, col in enumerate(row):
 
-    dx  = np.reshape(training_ldata[0:, 2], (N_train, 1))
-    dy  = np.reshape(training_ldata[0:, 3], (N_train, 1))
-    dth = np.reshape(training_ldata[0:, 4], (N_train, 1))
+                if i < self.offset:
+                    training_ldata[i][j] = col
 
-    # Change in x training data v, w, th, 1 -> dx
-    train_x_inputs = np.hstack([v, w, th, np.ones([N_train, 1])])
-    train_x_output = dx
+                elif i >= self.offset and i < self.offset + self.N_test:
+                    test_ldata[i - self.offset][j] = col
 
-    # Change in y training data  v, w, th, 1 -> dy
-    train_y_inputs = np.hstack([v, w, th, np.ones([N_train, 1])])
-    train_y_output = dy
+                    if j == len(row)-1:
+                        write_test_inputs.writerow(test_ldata[i - self.offset])
 
-    # Change in th training data  v, w, x, 1 -> dth
-    train_th_inputs = np.hstack([v, w, x, np.ones([N_train, 1])])
-    train_th_output = dth
+                else:
+                    arr_row = i - self.N_test
+                    training_ldata[arr_row][j] = col
 
-    # Generate test data set
-    v  = np.reshape(test_ldata[0:, 0], (N_test, 1))
-    w  = np.reshape(test_ldata[0:, 1], (N_test, 1))
-    x  = np.reshape(test_ldata[0:, 6], (N_test, 1))
-    th = np.reshape(test_ldata[0:, 8], (N_test, 1))
 
-    test_x_inputs = np.hstack([v, w, th, np.ones([N_test, 1])])
-    test_x_predic = np.zeros([N_test, 1])
+        # Create training data sets for LWLR
+        v  = np.reshape(training_ldata[0:, 0], (self.N_train, 1))
+        w  = np.reshape(training_ldata[0:, 1], (self.N_train, 1))
+        x  = np.reshape(training_ldata[0:, 6], (self.N_train, 1))
+        th = np.reshape(training_ldata[0:, 8], (self.N_train, 1))
 
-    test_y_inputs = np.hstack([v, w, th, np.ones([N_test, 1])])
-    test_y_predic = np.zeros([N_test, 1])
+        dx  = np.reshape(training_ldata[0:, 2], (self.N_train, 1))
+        dy  = np.reshape(training_ldata[0:, 3], (self.N_train, 1))
+        dth = np.reshape(training_ldata[0:, 4], (self.N_train, 1))
 
-    test_th_inputs = np.hstack([v, w, x, np.ones([N_test, 1])])
-    test_th_predic = np.zeros([N_test, 1])
+        # Change in x training data v, w, th, 1 -> dx
+        train_x_inputs = np.hstack([v, w, th, np.ones([self.N_train, 1])])
+        train_x_output = dx
 
-    # Initialize LWLR Object
-    ML_x = machine_learning.LWLR(train_x_inputs, train_x_output, 1)
-    ML_y = machine_learning.LWLR(train_y_inputs, train_y_output, 1)
-    ML_th = machine_learning.LWLR(train_th_inputs, train_th_output, 1)
+        # Change in y training data  v, w, th, 1 -> dy
+        train_y_inputs = np.hstack([v, w, th, np.ones([self.N_train, 1])])
+        train_y_output = dy
 
-    # make predictions for each test data point
-    for q in range(N_test):
-        test_x_predic[q] = ML_x.weighted_prediction(test_x_inputs[q])
-        test_y_predic[q] = ML_y.weighted_prediction(test_y_inputs[q])
-        test_th_predic[q] = ML_th.weighted_prediction(test_th_inputs[q])
+        # Change in th training data  v, w, x, 1 -> dth
+        train_th_inputs = np.hstack([v, w, x, np.ones([self.N_train, 1])])
+        train_th_output = dth
 
-        if q % 200 == 0:
-            print q
+        # Generate test data set
+        v  = np.reshape(test_ldata[0:, 0], (self.N_test, 1))
+        w  = np.reshape(test_ldata[0:, 1], (self.N_test, 1))
+        x  = np.reshape(test_ldata[0:, 6], (self.N_test, 1))
+        th = np.reshape(test_ldata[0:, 8], (self.N_test, 1))
 
-    for p in range(N_test):
+        test_x_inputs = np.hstack([v, w, th, np.ones([self.N_test, 1])])
+        test_x_predic = np.zeros([self.N_test, 1])
 
-        xout = [test_x_inputs[p][0], test_x_inputs[p][1], test_x_inputs[p][2], test_x_predic[p][0]
-        yout = [test_y_inputs[p][0], test_y_inputs[p][1], test_y_inputs[p][2], test_y_predic[p][0]]
-        thout = [test_th_inputs[p][0], test_th_inputs[p][1], test_th_inputs[p][2], test_th_predic[p][0]]
+        test_y_inputs = np.hstack([v, w, th, np.ones([self.N_test, 1])])
+        test_y_predic = np.zeros([self.N_test, 1])
 
-        write_x_data.writerow(xout)
-        write_y_data.writerow(yout)
-        write_th_data.writerow(thout)
+        test_th_inputs = np.hstack([v, w, x, np.ones([self.N_test, 1])])
+        test_th_predic = np.zeros([self.N_test, 1])
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(train_x_inputs[0:,0], train_x_inputs[0:,1], zs=train_x_output)
-    ax.scatter(test_x_inputs[0:,1], test_x_inputs[0:,2], zs=test_x_predic)
-    plt.xlabel("w")
-    plt.ylabel("th")
-    ax.set_zlabel("dx")
+        # Initialize LWLR Object
+        ML_x = machine_learning.LWLR(train_x_inputs, train_x_output, self.h)
+        ML_y = machine_learning.LWLR(train_y_inputs, train_y_output, self.h)
+        ML_th = machine_learning.LWLR(train_th_inputs, train_th_output, self.h)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(train_y_inputs[0:,0], train_y_inputs[0:,1], zs=train_y_output)
-    ax.scatter(test_y_inputs[0:,1], test_y_inputs[0:,2], zs=test_y_predic)
-    plt.xlabel("w")
-    plt.ylabel("th")
-    ax.set_zlabel("dy")
+        # make predictions for each test data point
+        for q in range(self.N_test):
+            test_x_predic[q] = ML_x.weighted_prediction(test_x_inputs[q])
+            test_y_predic[q] = ML_y.weighted_prediction(test_y_inputs[q])
+            test_th_predic[q] = ML_th.weighted_prediction(test_th_inputs[q])
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(train_th_inputs[0:,0], train_th_inputs[0:,1], zs=train_th_output)
-    ax.scatter(test_th_inputs[0:,1], test_th_inputs[0:,2], zs=test_th_predic)
-    plt.xlabel("w")
-    plt.ylabel("x")
-    ax.set_zlabel("dth")
+            if q % 200 == 0:
+                print q
+
+        # Assemble graph arrays
+        for p in range(self.N_test):
+
+            xout = [test_x_inputs[p][0], test_x_inputs[p][1], test_x_inputs[p][2], test_x_predic[p][0]]
+            yout = [test_y_inputs[p][0], test_y_inputs[p][1], test_y_inputs[p][2], test_y_predic[p][0]]
+            thout = [test_th_inputs[p][0], test_th_inputs[p][1], test_th_inputs[p][2], test_th_predic[p][0]]
+
+            write_x_data.writerow(xout)
+            write_y_data.writerow(yout)
+            write_th_data.writerow(thout)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_x_inputs[0:,1], train_x_inputs[0:,2], zs=train_x_output, s=1)
+        ax.scatter(test_x_inputs[0:,1], test_x_inputs[0:,2], c="r", zs=test_x_predic, zorder=5)
+        plt.xlabel("w")
+        plt.ylabel("th")
+        ax.set_zlabel("dx")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_y_inputs[0:,1], train_y_inputs[0:,2], zs=train_y_output, s=1)
+        ax.scatter(test_y_inputs[0:,1], test_y_inputs[0:,2], zs=test_y_predic, c="r", zorder=5)
+        plt.xlabel("w")
+        plt.ylabel("th")
+        ax.set_zlabel("dy")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_th_inputs[0:,1], train_th_inputs[0:,2], zs=train_th_output, s=1)
+        ax.scatter(test_th_inputs[0:,1], test_th_inputs[0:,2], zs=test_th_predic, c='r', zorder=5)
+        plt.xlabel("w")
+        plt.ylabel("x")
+        ax.set_zlabel("dth")
+
+    def part_b_eval(self, data_files):
+
+        x_results = machine_learning.load_data(data_files[0], 0, 0, None)
+        y_results = machine_learning.load_data(data_files[1], 0, 0, None)
+        th_results = machine_learning.load_data(data_files[2], 0, 0, None)
+
+        i = self.offset + 1
+
+        gt_arr = np.zeros([self.N_test-2, 2])
+        lwlr_arr = np.zeros([self.N_test-1, 2])
+
+        lwlr_arr[0][0] = self.learned_data[i][6]
+        lwlr_arr[0][1] = self.learned_data[i][7]
+
+        while i < self.N_test + self.offset - 1:
+
+            j = i - (self.offset + 1)
+            gt_arr[j][0] = self.learned_data[i][6]
+            gt_arr[j][1] = self.learned_data[i][7]
+
+            dt = self.learned_data[i][5]
+            dx = x_results[j][3]
+            dy = y_results[j][3]
+
+            lwlr_arr[j+1][0] = lwlr_arr[j][0] + dx * dt
+            lwlr_arr[j+1][1] = lwlr_arr[j][1] + dy * dt
+
+            i += 1
+
+        fig = plt.figure()
+        plt.plot(gt_arr[0:,0], gt_arr[0:,1])
+        plt.plot(lwlr_arr[0:,0], lwlr_arr[0:,1], 'r')
 
 def main():
     """
@@ -219,7 +266,12 @@ def main():
     # part_a_2D()
     # part_a_3D()
 
-    part_b()
+    data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
+
+    go = HW2(1000, 3000)
+    go.part_b()
+    go.part_b_eval(data_files)
+
     plt.show()
 
 main()
