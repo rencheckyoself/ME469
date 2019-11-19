@@ -195,9 +195,9 @@ class DataCreation(object):
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(self.fin_arr[0:,6], w, zs=th, s=1)
-        plt.xlabel('th')
-        plt.ylabel('w')
+        ax.scatter(w, self.fin_arr[0:,4], zs=th, s=1)
+        plt.xlabel('w')
+        plt.ylabel('x')
         ax.set_zlabel('dth')
         plt.title("Change in theta")
         ax.set_zlim(-1, 1)
@@ -265,9 +265,9 @@ class DataCreation(object):
         plt.ylabel('th')
         plt.title("Change in y vs. Heading")
 
-    def print_csv(self):
-        for _ig, row in enumerate(self.fin_arr):
-            self.write_matched_data.writerow(row)
+    # def print_csv(self):
+    #     for _ig, row in enumerate(self.fin_arr):
+    #         self.write_matched_data.writerow(row)
 
     def get_nearest_index(self, time_value):
         """
