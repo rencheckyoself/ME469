@@ -33,7 +33,7 @@ class DataCreation(object):
         self.odom_data = load_data('ds1_Odometry.dat', 3, 0, [0, 4, 5])
         self.groundtruth_data = load_data('ds1_Groundtruth.dat', 3, 0, [0, 3, 5, 7])
 
-        self.fin_arr = np.zeros([len(self.odom_data),7])
+        self.fin_arr = np.zeros([len(self.odom_data), 7])
 
         self.calced_data = open('learning_dataset.csv', 'wb')
         self.write_calced_data = csv.writer(self.calced_data, delimiter=" ")

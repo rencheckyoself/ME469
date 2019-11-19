@@ -1,24 +1,25 @@
 """Main Run File"""
 
-import machine_learning
 import numpy as np
 import csv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import machine_learning
 
 
 def main():
     """
     Main Execution Function
     """
-    go = HW2(1000, 550) #(N_test, offset)
+    go = HW2(1000, 3550) #(N_test, offset)
 
     # go.part_a_2d(500, .4)
     # go.part_a_3d(500, .4)
 
-    data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
 
     go.part_b()
+
+    data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
     go.part_b_eval(data_files)
 
     plt.show()
@@ -158,9 +159,9 @@ class HW2(object):
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(train_x_inputs[0:, 1], train_x_inputs[0:, 2], zs=train_x_output, s=1)
-        ax.scatter(test_x_inputs[0:, 1], test_x_inputs[0:, 2], c="r", zs=test_x_predic, zorder=5)
-        plt.xlabel("w")
+        ax.scatter(train_x_inputs[0:, 0], train_x_inputs[0:, 2], zs=train_x_output, s=1)
+        ax.scatter(test_x_inputs[0:, 0], test_x_inputs[0:, 2], c="r", zs=test_x_predic, zorder=5)
+        plt.xlabel("v")
         plt.ylabel("th")
         plt.title("LWR for Change in x")
         plt.legend(["Training Data", "Testing Data"])
@@ -168,10 +169,30 @@ class HW2(object):
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(train_y_inputs[0:, 1], train_y_inputs[0:, 2], zs=train_y_output, s=1)
-        ax.scatter(test_y_inputs[0:, 1], test_y_inputs[0:, 2], zs=test_y_predic, c="r", zorder=5)
-        plt.xlabel("w")
+        ax.scatter(train_x_inputs[0:, 0], train_x_inputs[0:, 1], zs=train_x_output, s=1)
+        ax.scatter(test_x_inputs[0:, 0], test_x_inputs[0:, 1], c="r", zs=test_x_predic, zorder=5)
+        plt.xlabel("v")
+        plt.ylabel("w")
+        plt.title("LWR for Change in x")
+        plt.legend(["Training Data", "Testing Data"])
+        ax.set_zlabel("dx")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_y_inputs[0:, 0], train_y_inputs[0:, 2], zs=train_y_output, s=1)
+        ax.scatter(test_y_inputs[0:, 0], test_y_inputs[0:, 2], zs=test_y_predic, c="r", zorder=5)
+        plt.xlabel("v")
         plt.ylabel("th")
+        plt.title("LWR for Change in y")
+        plt.legend(["Training Data", "Testing Data"])
+        ax.set_zlabel("dy")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_y_inputs[0:, 0], train_y_inputs[0:, 1], zs=train_y_output, s=1)
+        ax.scatter(test_y_inputs[0:, 0], test_y_inputs[0:, 1], zs=test_y_predic, c="r", zorder=5)
+        plt.xlabel("v")
+        plt.ylabel("w")
         plt.title("LWR for Change in y")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dy")
@@ -180,9 +201,18 @@ class HW2(object):
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(train_th_inputs[0:, 1], train_th_inputs[0:, 2], zs=train_th_output, s=1)
         ax.scatter(test_th_inputs[0:, 1], test_th_inputs[0:, 2], zs=test_th_predic, c='r', zorder=5)
-
         plt.xlabel("w")
         plt.ylabel("x")
+        plt.title("LWR for Change in Theta")
+        plt.legend(["Training Data", "Testing Data"])
+        ax.set_zlabel("dth")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(train_th_inputs[0:, 0], train_th_inputs[0:, 1], zs=train_th_output, s=1)
+        ax.scatter(test_th_inputs[0:, 0], test_th_inputs[0:, 1], zs=test_th_predic, c='r', zorder=5)
+        plt.xlabel("v")
+        plt.ylabel("w")
         plt.title("LWR for Change in Theta")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dth")
@@ -372,7 +402,7 @@ class HW2(object):
         plt.plot(walls_x, walls_y, 'k', label='_nolegend_')
 
 
-def part_a_2d(self, N, h):
+def part_a_2d(N, h):
     """
     Function to test the performance of a learning algoithm using a sine wave
     """
@@ -435,7 +465,7 @@ def part_a_2d(self, N, h):
     plt.xlim([0, N])
     plt.ylim([0, None])
 
-def part_a_3d(self, N, h):
+def part_a_3d(N, h):
     """
     Function to test the performance of a learning algoithm using a 3D
     sine wave
