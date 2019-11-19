@@ -12,16 +12,13 @@ def part_a_2D():
     """
     noise_var = .25
     N = 500 # Number of data points
+    h_val = .04
 
     # Generate training data for a sine wave
     training_data_x1 = np.array([np.linspace(0, 2*np.pi, N)]).T
 
     training_data_x = np.hstack([training_data_x1, np.ones([training_data_x1.shape[0], 1])])
     training_data_y = np.zeros(N)
-
-    print training_data_x1.shape
-
-    print training_data_x.shape
 
     for y, x, in enumerate(training_data_x):
         training_data_y[y] = np.sin(x[0]) + np.random.normal(0, noise_var)
@@ -34,21 +31,43 @@ def part_a_2D():
     test_data_pred_uw = np.zeros([N,1])
 
     # Initialize LWLR Object
-    ML = machine_learning.LWLR(training_data_x, training_data_y, 0.4)
+    ML = machine_learning.LWLR(training_data_x, training_data_y, h_val)
+
+    var = np.zeros(N)
+    MSE_cv = np.zeros(N)
 
     # make predictions for each test data point
-    for y, x in enumerate(test_data_x):
-        test_data_pred_w[y] = ML.weighted_prediction(x)
-        test_data_pred_uw[y] = ML.unweighted_prediction(x)
+    for i, q in enumerate(test_data_x):
+
+        test_data_pred_w[i] = ML.weighted_prediction(q)
+        var[i], MSE_cv[i] = ML.evaluate_learning()
+        # print ML.evaluate_learning()
+        test_data_pred_uw[i] = ML.unweighted_prediction(q)
 
     plt.plot(training_data_x[0:,0], training_data_y, 'bo')
     plt.plot(test_data_x[0:,0], test_data_pred_w, 'ro')
     plt.plot(test_data_x[0:,0], test_data_pred_uw, 'go')
 
-    plt.title("LWLR Test and Comparison")
+    plt.title("LWLR Test and Comparison for h=" + str(h_val))
     plt.xlabel("x")
     plt.ylabel("sin(x)")
     plt.legend(["Training Data", "Weighted Predictions", "Unweighted Predictions"])
+
+    fig = plt.figure()
+    plt.plot(var, 'b')
+    plt.title("Test Variance for h=" + str(h_val))
+    plt.xlabel("Query Index")
+    plt.ylabel("Varience")
+    plt.xlim([0, N])
+    plt.ylim([0, None])
+
+    fig = plt.figure()
+    plt.plot(MSE_cv, 'b')
+    plt.title("Test Cross Validation for h=" + str(h_val))
+    plt.xlabel("Query Index")
+    plt.ylabel("MSE_cv")
+    plt.xlim([0, N])
+    plt.ylim([0, None])
 
 def part_a_3D():
     """
@@ -78,10 +97,15 @@ def part_a_3D():
     # Initialize LWLR Object
     ML = machine_learning.LWLR(training_data_x, training_data_y, 0.4)
 
+    var = np.zeros(N)
+    MSE_cv = np.zeros(N)
+
     # make predictions for each test data point
-    for y, x in enumerate(test_data_x):
-        test_data_pred_w[y] = ML.weighted_prediction(x)
-        test_data_pred_uw[y] = ML.unweighted_prediction(x)
+    for i, q in enumerate(test_data_x):
+        test_data_pred_w[i] = ML.weighted_prediction(q)
+        var[i], MSE_cv[i] = ML.evaluate_learning()
+        # print ML.evaluate_learning()
+        test_data_pred_uw[i] = ML.unweighted_prediction(q)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -93,6 +117,18 @@ def part_a_3D():
     plt.xlabel("x1")
     plt.ylabel("x2")
     plt.legend(["Training Data", "Weighted Predictions", "Unweighted Predictions"])
+
+    fig = plt.figure()
+    plt.plot(var, 'b')
+    plt.title("Test Variance")
+    plt.xlabel("Query Index")
+    plt.ylabel("Varience")
+
+    fig = plt.figure()
+    plt.plot(MSE_cv, 'b')
+    plt.title("Test Cross Validation")
+    plt.xlabel("Query Index")
+    plt.ylabel("MSE_cv")
 
 
 class HW2(object):
@@ -146,9 +182,9 @@ class HW2(object):
         x  = np.reshape(training_ldata[0:, 6], (self.N_train, 1))
         th = np.reshape(training_ldata[0:, 8], (self.N_train, 1))
 
-        dx  = np.reshape(training_ldata[0:, 2], (self.N_train, 1))
-        dy  = np.reshape(training_ldata[0:, 3], (self.N_train, 1))
-        dth = np.reshape(training_ldata[0:, 4], (self.N_train, 1))
+        dx  = training_ldata[0:, 2]
+        dy  = training_ldata[0:, 3]
+        dth = training_ldata[0:, 4]
 
         # Change in x training data v, w, th, 1 -> dx
         train_x_inputs = np.hstack([v, w, th, np.ones([self.N_train, 1])])
@@ -182,13 +218,21 @@ class HW2(object):
         ML_y = machine_learning.LWLR(train_y_inputs, train_y_output, self.h)
         ML_th = machine_learning.LWLR(train_th_inputs, train_th_output, self.h)
 
+        var = np.zeros([self.N_test,3])
+        MSE_cv = np.zeros([self.N_test,3])
+
         # make predictions for each test data point
         for q in range(self.N_test):
             test_x_predic[q] = ML_x.weighted_prediction(test_x_inputs[q])
-            test_y_predic[q] = ML_y.weighted_prediction(test_y_inputs[q])
-            test_th_predic[q] = ML_th.weighted_prediction(test_th_inputs[q])
+            var[q][0], MSE_cv[q][0] = ML_x.evaluate_learning()
 
-            if q % 200 == 0:
+            test_y_predic[q] = ML_y.weighted_prediction(test_y_inputs[q])
+            var[q][1], MSE_cv[q][1] = ML_y.evaluate_learning()
+
+            test_th_predic[q] = ML_th.weighted_prediction(test_th_inputs[q])
+            var[q][2], MSE_cv[q][2] = ML_th.evaluate_learning()
+
+            if q % 20 == 0:
                 print q
 
         # Assemble graph arrays
@@ -225,6 +269,20 @@ class HW2(object):
         plt.xlabel("w")
         plt.ylabel("x")
         ax.set_zlabel("dth")
+
+        for i in range(3):
+            fig = plt.figure()
+            plt.plot(var[0:,i], 'b')
+            plt.title("Test Variance")
+            plt.xlabel("Query Index")
+            plt.ylabel("Varience")
+
+            fig = plt.figure()
+            plt.plot(MSE_cv[0:,i], 'b')
+            plt.title("Test Cross Validation")
+            plt.xlabel("Query Index")
+            plt.ylabel("MSE_cv")
+
 
     def part_b_eval(self, data_files):
 
@@ -263,14 +321,14 @@ def main():
     """
     Main Execution Function
     """
-    # part_a_2D()
+    part_a_2D()
     # part_a_3D()
 
-    data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
-
-    go = HW2(1000, 3000)
-    go.part_b()
-    go.part_b_eval(data_files)
+    # data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
+    #
+    # go = HW2(200, 3000) #(N_test, offset)
+    # go.part_b()
+    # go.part_b_eval(data_files)
 
     plt.show()
 

@@ -30,23 +30,30 @@ class LWLR(object):
         self.N = data_x.shape[0]
         self.n = data_x.shape[1]
 
-        self.beta = self.determine_beta()
+        self.W = np.zeros([self.N,self.N])
 
-        # self.p = 2 # kernal function exp
+        self.beta = 0
+        self.residuals = 0
         self.h = h # bandwidth
 
-    def determine_beta(self):
+        self.Zinv = 0
 
-        buf = np.dot(self.training_data_x.T, self.training_data_x)
-        buf = np.linalg.inv(buf)
-        buf = np.dot(buf,self.training_data_x.T)
+    def determine_beta(self, input_mat, output_vec, inv_matrix=None):
 
-        B = np.dot(buf, self.training_data_y)
+        if inv_matrix is None:
+            buf = np.dot(input_mat.T, input_mat)
+            buf = np.linalg.pinv(buf)
+        else:
+            buf = inv_matrix
+
+        buf = np.dot(buf, input_mat.T)
+        B = np.dot(buf, output_vec)
 
         return B
 
     def unweighted_prediction(self, query):
 
+        self.beta = self.determine_beta(self.training_data_x, self.training_data_y)
         uwprediction = np.dot(query, self.beta)
 
         return uwprediction
@@ -55,16 +62,22 @@ class LWLR(object):
         """
         Calculate the weighted prediction for a given query array
         """
-        W_matrix = self.get_weight_matrix(query)
 
-        Z_matrix = np.dot(W_matrix, self.training_data_x)
-        V_matrix = np.dot(W_matrix, self.training_data_y)
+        self.get_weight_matrix(query)
+
+        Z_matrix = np.dot(self.W, self.training_data_x)
+        V_matrix = np.dot(self.W, self.training_data_y)
 
         buf = np.dot(Z_matrix.T, Z_matrix)
         buf = np.linalg.pinv(buf)
+
+        self.Zinv = np.copy(buf)
+
         buf = np.dot(query.T, buf)
         buf = np.dot(buf,Z_matrix.T)
         wprediction = np.dot(buf,V_matrix)
+
+        self.beta = self.determine_beta(Z_matrix, V_matrix, inv_matrix=self.Zinv)
 
         return wprediction
 
@@ -72,12 +85,48 @@ class LWLR(object):
         """
         Determine the weight matrix for a query point
         """
-        W = np.zeros([self.N,self.N])
+
+        self.n_lwr = 0
+        self.criteria = 0
 
         for i, xi in enumerate(self.training_data_x):
             buf = np.dot((xi - query).T,(xi - query)) # Euclidean Distance
             d = np.sqrt(buf) / self.h # Euclidean Distance
             K = np.exp(-np.dot(d.T, d)) # Gaussian Kernal
-            W[i][i] = round(np.sqrt(K), 4) # Assemble Weight Matrix
+            self.W[i][i] = round(np.sqrt(K), 4) # Assemble Weight Matrix
 
-        return W
+    def evaluate_learning(self):
+
+        n_lwr = 0
+        p_lwr = 0
+        criteria = 0
+        MSE_cv = 0
+
+        for i, xi in enumerate(self.training_data_x):
+
+            if self.W[i][i] == 0:
+                continue
+
+            else:
+                z_i = self.W[i][i] * xi
+                v_i = self.W[i][i] * self.training_data_y[i]
+
+                r_i =  np.dot(z_i, self.beta) - v_i
+
+                buf = self.W[i][i]**2
+                buf = np.dot(buf, z_i.T)
+                buf = np.dot(buf, self.Zinv)
+                p_lwr = np.dot(buf, z_i)
+
+                criteria += r_i**2
+                n_lwr += self.W[i][i]**2
+
+                buf = np.dot(z_i.T, self.Zinv)
+                buf = np.dot(buf, z_i)
+
+                MSE_cv += (r_i / (1 - buf))**2
+
+        var_q = criteria / (n_lwr - p_lwr)
+        MSE_cv_q = MSE_cv * (1 / n_lwr)
+
+        return var_q, MSE_cv_q
