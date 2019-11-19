@@ -1,4 +1,9 @@
+"""
+File to contain LWR Class
+"""
 import numpy as np
+
+
 
 # import data and assign each control and GT data point a unique ID
 def load_data(file_name, header, footer, cols):
@@ -92,7 +97,7 @@ class LWLR(object):
         for i, xi in enumerate(self.training_data_x):
             buf = np.dot((xi - query).T,(xi - query)) # Euclidean Distance
             d = np.sqrt(buf) / self.h # Euclidean Distance
-            K = np.exp(-np.dot(d.T, d)) # Gaussian Kernal
+            K = np.exp(-1 * np.dot(d.T, d)) # Gaussian Kernal
             self.W[i][i] = round(np.sqrt(K), 4) # Assemble Weight Matrix
 
     def evaluate_learning(self):
