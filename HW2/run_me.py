@@ -11,7 +11,7 @@ def main():
     """
     Main Execution Function
     """
-    go = HW2(1000, 3550) #(N_test, offset)
+    go = HW2(1000, 550) #(N_test, offset)
 
     # go.part_a_2d(500, .4)
     # go.part_a_3d(500, .4)
@@ -166,6 +166,7 @@ class HW2(object):
         plt.title("LWR for Change in x")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dx")
+        ax.set_zlim(-.5, .5)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -186,6 +187,7 @@ class HW2(object):
         plt.title("LWR for Change in y")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dy")
+        ax.set_zlim(-.5, .5)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -206,6 +208,7 @@ class HW2(object):
         plt.title("LWR for Change in Theta")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dth")
+        ax.set_zlim(-1, 1)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -216,6 +219,7 @@ class HW2(object):
         plt.title("LWR for Change in Theta")
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dth")
+        ax.set_zlim(-5, 5)
 
         for i in range(3):
             header = ["x", "y", "th"]
