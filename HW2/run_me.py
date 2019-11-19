@@ -12,7 +12,7 @@ def part_a_2D():
     """
     noise_var = .25
     N = 500 # Number of data points
-    h_val = .04
+    h_val = 1
 
     # Generate training data for a sine wave
     training_data_x1 = np.array([np.linspace(0, 2*np.pi, N)]).T
