@@ -1,7 +1,7 @@
 """Main Run File"""
 
-import numpy as np
 import csv
+import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import machine_learning
@@ -11,16 +11,20 @@ def main():
     """
     Main Execution Function
     """
-    go = HW2(1000, 550) #(N_test, offset)
+    go = HW2(1000, 550) # (N_test, offset) Change to (1000, 3550) for full Test2
+                       #                  See Class for a full description
 
-    # go.part_a_2d(500, .4)
-    # go.part_a_3d(500, .4)
+    print("part a 2D Running...")
+    part_a_2d(500, .4) #(N, h) - Sine Wave Test
+    print("part a 3D Running...")
+    part_a_3d(500, .4) #(N, h) - 3D Sine Wave Test
 
-
-    go.part_b()
+    print("part b Running...")
+    go.part_b() # Main ML Function
 
     data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
-    go.part_b_eval(data_files)
+    go.part_b_eval(data_files) # Used create some plots and play with data from a
+                               # previous run based on specified data files
 
     plt.show()
 
@@ -43,17 +47,22 @@ class HW2(object):
     def __init__(self, N_test, offset):
 
         self.learned_data = machine_learning.load_data("learning_dataset.csv", 0, 0, None)
+
         self.N_test = N_test
         self.N_train = self.learned_data.shape[0] - self.N_test
-        self.offset = offset # int(self.learned_data.shape[0] * np.random.rand(1)
+        self.offset = offset
         self.h = .06
 
     def part_b(self):
         """
-        Function to prepare the learning data to be fed into the LWR Algorithm
+        Function to
+            1) Create the training set and testing set and format it for LWR Alg
+            2) Run test set through LWR
+            3) Save output into csv files
+            4) Create some plots
         """
 
-        # Export data for later use to avoid running multipe times
+        # Used to export data for later use to avoid running multipe times
         x_data_file = open('x_data.csv', 'wb')
         write_x_data = csv.writer(x_data_file, delimiter=" ")
 
@@ -153,10 +162,12 @@ class HW2(object):
             yout = [test_y_inputs[p][0], test_y_inputs[p][1], test_y_inputs[p][2], test_y_predic[p][0]]
             thout = [test_th_inputs[p][0], test_th_inputs[p][1], test_th_inputs[p][2], test_th_predic[p][0]]
 
+            # Save Out Data
             write_x_data.writerow(xout)
             write_y_data.writerow(yout)
             write_th_data.writerow(thout)
 
+        # Plot Figures
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(train_x_inputs[0:, 0], train_x_inputs[0:, 2], zs=train_x_output, s=1)
@@ -224,21 +235,30 @@ class HW2(object):
         for i in range(3):
             header = ["x", "y", "th"]
 
+            # fig = plt.figure()
+            # plt.plot(MSE_cv[0:, i], 'b')
+            # plt.title("Test Cross Validation for " + header[i])
+            # plt.xlabel("Query Index")
+            # plt.ylabel("MSE_cv")
+
             fig = plt.figure()
             plt.plot(var[0:, i], 'b')
             plt.title("Test Variance for " + header[i])
             plt.xlabel("Query Index")
             plt.ylabel("Varience")
 
-            fig = plt.figure()
-            plt.plot(MSE_cv[0:, i], 'b')
-            plt.title("Test Cross Validation for " + header[i])
-            plt.xlabel("Query Index")
-            plt.ylabel("MSE_cv")
 
 
     def part_b_eval(self, data_files):
+        """
+        Function to do some extra post processing of the results using the saved
+        data.
 
+        MAKE SURE THE CLASS WAS INITIALZED WITH N_TEST AND OFFSET VALUES THAT
+        CORRESPOND TO THE SAVED DATA.
+
+        Creates the error plots and trjectory plot
+        """
         x_results = machine_learning.load_data(data_files[0], 0, 0, None)
         y_results = machine_learning.load_data(data_files[1], 0, 0, None)
         th_results = machine_learning.load_data(data_files[2], 0, 0, None)
@@ -326,8 +346,8 @@ class HW2(object):
               state = [x,y,theta] array with the first three positions as the start vaiables
               noise_check = 1 to turn on noise, else add zero noise
 
-            Sets:
-              self.new_pos = [x,y,theta]
+            Output:
+              new_pos = [x,y,theta]
               The new position of the robot after some change in time
         """
 
@@ -370,13 +390,15 @@ class HW2(object):
         return new_pos
 
     def plot_map(self):
-        """Plots the Landmarks Locations and Walls
+        """\
+        Plots the Landmarks Locations and Walls
 
-           Input:
-                 landmark_data: list of landmark_data formatted like the original .dat file
+        Input:
+            landmark_data: list of landmark_data formatted like the original .dat file
 
-           Output:
-                  None. Adds Landmark and walls to final plot"""
+        Output:
+            None. Adds Landmark and walls to final plot
+        """
 
         # parse landmark data to plot
 
@@ -455,19 +477,19 @@ def part_a_2d(N, h):
 
     plt.figure()
     plt.plot(var, 'b')
-    plt.title("Test Variance for h=" + str(h_val))
+    plt.title("2D Sine Test Variance for h=" + str(h_val))
     plt.xlabel("Query Index")
     plt.ylabel("Varience")
     plt.xlim([0, N])
     plt.ylim([0, None])
 
-    plt.figure()
-    plt.plot(MSE_cv, 'b')
-    plt.title("Test Cross Validation for h=" + str(h_val))
-    plt.xlabel("Query Index")
-    plt.ylabel("MSE_cv")
-    plt.xlim([0, N])
-    plt.ylim([0, None])
+    # plt.figure()
+    # plt.plot(MSE_cv, 'b')
+    # plt.title("Test Cross Validation for h=" + str(h_val))
+    # plt.xlabel("Query Index")
+    # plt.ylabel("MSE_cv")
+    # plt.xlim([0, N])
+    # plt.ylim([0, None])
 
 def part_a_3d(N, h):
     """
@@ -523,14 +545,16 @@ def part_a_3d(N, h):
 
     fig = plt.figure()
     plt.plot(var, 'b')
-    plt.title("Test Variance")
+    plt.title("3D Sine Test Variance")
     plt.xlabel("Query Index")
     plt.ylabel("Varience")
+    plt.xlim([0, N])
+    plt.ylim([0, None])
 
-    fig = plt.figure()
-    plt.plot(MSE_cv, 'b')
-    plt.title("Test Cross Validation")
-    plt.xlabel("Query Index")
-    plt.ylabel("MSE_cv")
+    # fig = plt.figure()
+    # plt.plot(MSE_cv, 'b')
+    # plt.title("Test Cross Validation")
+    # plt.xlabel("Query Index")
+    # plt.ylabel("MSE_cv")
 
 main()

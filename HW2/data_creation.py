@@ -69,7 +69,7 @@ class DataCreation(object):
 
     def clean_for_dt(self):
         """
-        Only keep points with a groundtruth pose within .05 of the control.
+        Only keep points with a groundtruth pose within .05sec of the control.
         """
         buf = np.copy(self.fin_arr)
         # time_comp = []
@@ -91,6 +91,9 @@ class DataCreation(object):
 
     def calc_state_change(self):
         """
+
+        Calcultes the state change from the groundtruth data and assembled the
+        output file. Also generates all the plots.
 
         Assumptions:
             The groundtruth state was recorded at the time the control was sent.

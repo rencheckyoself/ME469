@@ -3,11 +3,9 @@ File to contain LWR Class
 """
 import numpy as np
 
-
-
 # import data and assign each control and GT data point a unique ID
 def load_data(file_name, header, footer, cols):
-    """Loads in data from a text file
+    """
        Function to import data from a file
 
        Input:
@@ -18,7 +16,8 @@ def load_data(file_name, header, footer, cols):
 
        Output:
             data = list type of data from file.
-       Files must be in same directory as the python file."""
+       Files must be in same directory as the python file
+    """
 
     data = np.genfromtxt(file_name, skip_header=header, skip_footer=footer,
                          names=True, dtype=None, delimiter=' ', usecols=cols)
@@ -44,7 +43,12 @@ class LWLR(object):
         self.Zinv = 0
 
     def determine_beta(self, input_mat, output_vec, inv_matrix=None):
+        """
+        Calulates the beta matrix given an input matrix and output vector
 
+        inv_matrix is used to avoid recomputing the matrix inverse from the
+        prediction step if doing a weighted prediction
+        """
         if inv_matrix is None:
             buf = np.dot(input_mat.T, input_mat)
             buf = np.linalg.pinv(buf)
@@ -57,7 +61,9 @@ class LWLR(object):
         return B
 
     def unweighted_prediction(self, query):
-
+        """
+        Calculate the unweighted prediction for a given query array
+        """
         self.beta = self.determine_beta(self.training_data_x, self.training_data_y)
         uwprediction = np.dot(query, self.beta)
 
@@ -65,24 +71,25 @@ class LWLR(object):
 
     def weighted_prediction(self,query):
         """
-        Calculate the weighted prediction for a given query array
+        Calculate the locally weighted prediction for a given query array
         """
 
         self.get_weight_matrix(query)
 
-        Z_matrix = np.dot(self.W, self.training_data_x)
-        V_matrix = np.dot(self.W, self.training_data_y)
+        Z_matrix = np.dot(self.W, self.training_data_x) # Compute Z Matrix
+        V_matrix = np.dot(self.W, self.training_data_y) # Compute V Matrix
 
+        # Step by Step work through the prediction equation:
         buf = np.dot(Z_matrix.T, Z_matrix)
         buf = np.linalg.pinv(buf)
 
         self.Zinv = np.copy(buf)
 
         buf = np.dot(query.T, buf)
-        buf = np.dot(buf,Z_matrix.T)
-        wprediction = np.dot(buf,V_matrix)
+        buf = np.dot(buf, Z_matrix.T)
+        wprediction = np.dot(buf, V_matrix)
 
-        self.beta = self.determine_beta(Z_matrix, V_matrix, inv_matrix=self.Zinv)
+        self.beta = self.determine_beta(Z_matrix, V_matrix, inv_matrix=self.Zinv) # used for variance computation
 
         return wprediction
 
@@ -90,18 +97,16 @@ class LWLR(object):
         """
         Determine the weight matrix for a query point
         """
-
-        self.n_lwr = 0
-        self.criteria = 0
-
         for i, xi in enumerate(self.training_data_x):
-            buf = np.dot((xi - query).T,(xi - query)) # Euclidean Distance
-            d = np.sqrt(buf) / self.h # Euclidean Distance
+            buf = np.dot((xi - query).T,(xi - query)) # Unweighted Euclidean Distance
+            d = np.sqrt(buf) / self.h # Unweighted Euclidean Distance
             K = np.exp(-1 * np.dot(d.T, d)) # Gaussian Kernal
-            self.W[i][i] = round(np.sqrt(K), 4) # Assemble Weight Matrix
+            self.W[i][i] = round(np.sqrt(K), 8) # Assemble Weight Matrix
 
     def evaluate_learning(self):
-
+        """
+        Calculate the variance for a given query point and MSE
+        """
         n_lwr = 0
         p_lwr = 0
         criteria = 0
