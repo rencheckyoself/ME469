@@ -12,7 +12,7 @@ def main():
     Main Execution Function
     """
     go = HW2(1000, 550) # (N_test, offset) Change to (1000, 3550) for full Test2
-                       #                  See Class for a full description
+                        #                  See Class for a full description
 
     print("part a 2D Running...")
     part_a_2d(500, .4) #(N, h) - Sine Wave Test
@@ -124,14 +124,22 @@ class HW2(object):
         x = np.reshape(test_ldata[0:, 6], (self.N_test, 1))
         th = np.reshape(test_ldata[0:, 8], (self.N_test, 1))
 
+        dx = test_ldata[0:, 2]
+        dy = test_ldata[0:, 3]
+        dth = test_ldata[0:, 4]
+
         test_x_inputs = np.hstack([v, w, th, np.ones([self.N_test, 1])])
         test_x_predic = np.zeros([self.N_test, 1])
+        test_x_known = dx
 
         test_y_inputs = np.hstack([v, w, th, np.ones([self.N_test, 1])])
         test_y_predic = np.zeros([self.N_test, 1])
+        test_y_known = dy
 
         test_th_inputs = np.hstack([v, w, x, np.ones([self.N_test, 1])])
         test_th_predic = np.zeros([self.N_test, 1])
+        test_th_known = dth
+
 
         # Initialize LWLR Object
         ML_x = machine_learning.LWLR(train_x_inputs, train_x_output, self.h)
@@ -231,6 +239,30 @@ class HW2(object):
         plt.legend(["Training Data", "Testing Data"])
         ax.set_zlabel("dth")
         ax.set_zlim(-5, 5)
+
+        fig = plt.figure()
+        plt.plot(test_x_known, 'b')
+        plt.plot(test_x_predic, 'r')
+        plt.title("dx Comparison")
+        plt.xlabel("Query Index")
+        plt.ylabel("dx")
+        plt.legend(["Known", "Predicted"])
+
+        fig = plt.figure()
+        plt.plot(test_y_known, 'b')
+        plt.plot(test_y_predic, 'r')
+        plt.title("dy Comparison")
+        plt.xlabel("Query Index")
+        plt.ylabel("dy")
+        plt.legend(["Known", "Predicted"])
+
+        fig = plt.figure()
+        plt.plot(test_th_known, 'b')
+        plt.plot(test_th_predic, 'r')
+        plt.title("dth Comparison")
+        plt.xlabel("Query Index")
+        plt.ylabel("dth")
+        plt.legend(["Known", "Predicted"])
 
         for i in range(3):
             header = ["x", "y", "th"]
