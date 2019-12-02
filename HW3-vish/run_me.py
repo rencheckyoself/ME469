@@ -242,8 +242,8 @@ class HW3(object):
         fig = plt.figure()
         plt.plot(test_x_predic[0:, 0], test_y_predic[0:, 0], 'b')
         plt.plot(test_x_known, test_y_known, 'r')
-        plt.xlabel("Query")
-        plt.ylabel("Predicted Cos(th)")
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
         plt.legend(['prediction', 'actual'])
         plt.title("Trajectory")
 
