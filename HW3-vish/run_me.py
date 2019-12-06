@@ -26,7 +26,9 @@ def main():
     # go.part_b_eval(data_files) # Used create some plots and play with data from a
     #                            # previous run based on specified data files
 
-    go = HW3(3523, 7999)
+    # go = HW3(3523, 7999)
+
+    go = HW3(1500, 0)
 
     go.run_test()
 
@@ -154,6 +156,22 @@ class HW3(object):
 
         var = np.zeros([self.N_test, 4])
         MSE_cv = np.zeros([self.N_test, 4])
+        error_comp = np.zeros([self.N_test, 4])
+
+        tot_x_err = 0
+        tot_y_err = 0
+        tot_sth_err = 0
+        tot_cth_err = 0
+
+        ss_tot_x = 0
+        ss_tot_y = 0
+        ss_tot_cth = 0
+        ss_tot_sth = 0
+
+        mean_x = np.sum(test_x_known)/self.N_test
+        mean_y = np.sum(test_y_known)/self.N_test
+        mean_cth = np.sum(test_cth_known)/self.N_test
+        mean_sth = np.sum(test_sth_known)/self.N_test
 
         # make predictions for each test data point
         for q in range(self.N_test):
@@ -169,6 +187,23 @@ class HW3(object):
             test_cth_predic[q] = ML_cth.weighted_prediction(test_cth_inputs[q])
             var[q][3], MSE_cv[q][3] = ML_cth.evaluate_learning()
 
+            error_comp[q][0] = (test_x_predic[q] - test_x_known[q])**2
+            tot_x_err += error_comp[q][0]
+
+            error_comp[q][1] = (test_y_predic[q] - test_y_known[q])**2
+            tot_y_err += error_comp[q][1]
+
+            error_comp[q][2] = (test_sth_predic[q] - test_sth_known[q])**2
+            tot_sth_err += error_comp[q][2]
+
+            error_comp[q][3] = (test_cth_predic[q] - test_cth_known[q])**2
+            tot_cth_err += error_comp[q][3]
+
+            ss_tot_x += (test_x_known[q] - mean_x)**2
+            ss_tot_y += (test_y_known[q] - mean_y)**2
+            ss_tot_cth += (test_cth_known[q] - mean_cth)**2
+            ss_tot_sth += (test_sth_known[q] - mean_sth)**2
+
             if q % 20 == 0:
                 print q
 
@@ -181,6 +216,34 @@ class HW3(object):
         #     # Save Out Data
         #     write_x_data.writerow(xout)
         #     write_y_data.writerow(yout)
+
+        avg_x_err = tot_x_err/self.N_test
+        avg_y_err = tot_y_err/self.N_test
+        avg_sth_err = tot_sth_err/self.N_test
+        avg_cth_err = tot_cth_err/self.N_test
+
+        R2_x = 1 - (tot_x_err/ss_tot_x)
+        R2_y = 1 - (tot_y_err/ss_tot_y)
+        R2_cth = 1 - (tot_cth_err/ss_tot_cth)
+        R2_sth = 1 - (tot_sth_err/ss_tot_sth)
+
+        print("Avg X Error:")
+        print(avg_x_err)
+
+        print("Avg Y Error")
+        print(avg_y_err)
+
+        print("Avg sTh Error")
+        print(avg_sth_err)
+
+        print("Avg cTh Error")
+        print(avg_cth_err)
+
+        print("R2 Values (x, y, cth, sth):")
+        print(R2_x)
+        print(R2_y)
+        print(R2_cth)
+        print(R2_sth)
 
         # Plot Figures
         fig = plt.figure()
@@ -246,6 +309,8 @@ class HW3(object):
         plt.ylabel("Y Position")
         plt.legend(['prediction', 'actual'])
         plt.title("Trajectory")
+        plt.xlim([-1.5,4.5])
+        plt.ylim([-5,5])
 
 
 class HW2(object):

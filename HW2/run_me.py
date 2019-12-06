@@ -14,13 +14,13 @@ def main():
     go = HW2(1000, 550) # (N_test, offset) Change to (1000, 3550) for full Test2
                         #                  See Class for a full description
 
-    print("part a 2D Running...")
-    part_a_2d(500, .4) #(N, h) - Sine Wave Test
-    print("part a 3D Running...")
-    part_a_3d(500, .4) #(N, h) - 3D Sine Wave Test
+    # print("part a 2D Running...")
+    # part_a_2d(500, .4) #(N, h) - Sine Wave Test
+    # print("part a 3D Running...")
+    # part_a_3d(500, .4) #(N, h) - 3D Sine Wave Test
 
     print("part b Running...")
-    go.part_b() # Main ML Function
+    # go.part_b() # Main ML Function
 
     data_files = ["x_data.csv", "y_data.csv", "th_data.csv"]
     go.part_b_eval(data_files) # Used create some plots and play with data from a
@@ -279,8 +279,6 @@ class HW2(object):
             plt.xlabel("Query Index")
             plt.ylabel("Varience")
 
-
-
     def part_b_eval(self, data_files):
         """
         Function to do some extra post processing of the results using the saved
@@ -301,7 +299,7 @@ class HW2(object):
         lwlr_arr = np.zeros([self.N_test-1, 2])
         odom_arr = np.zeros([self.N_test-1, 3])
 
-        error_comp = np.zeros([self.N_test, 2])
+        error_comp = np.zeros([self.N_test, 3])
 
         lwlr_arr[0][0] = self.learned_data[i][6]
         lwlr_arr[0][1] = self.learned_data[i][7]
@@ -309,6 +307,27 @@ class HW2(object):
         odom_arr[0][0] = self.learned_data[i][6]
         odom_arr[0][1] = self.learned_data[i][7]
         odom_arr[0][2] = self.learned_data[i][8]
+
+        tot_x_err = 0
+        tot_y_err = 0
+        tot_th_err = 0
+
+        ss_tot_x = 0
+        ss_tot_y = 0
+        ss_tot_th = 0
+
+        mean_x = 0
+        mean_y = 0
+        mean_th = 0
+
+        for _ig, row in enumerate(self.learned_data):
+            mean_x += row[2]
+            mean_y += row[3]
+            mean_th += row[4]
+
+        mean_x = mean_x/self.N_test
+        mean_y = mean_y/self.N_test
+        mean_th = mean_th/self.N_test
 
         while i < self.N_test + self.offset - 1:
 
@@ -319,6 +338,7 @@ class HW2(object):
             dt = self.learned_data[i][5]
             dx = x_results[j][3]
             dy = y_results[j][3]
+            dth = th_results[j][3]
 
             lwlr_arr[j+1][0] = lwlr_arr[j][0] + dx * dt
             lwlr_arr[j+1][1] = lwlr_arr[j][1] + dy * dt
@@ -335,10 +355,42 @@ class HW2(object):
             odom_arr[j+1][1] = new_pos[1]
             odom_arr[j+1][2] = new_pos[2]
 
-            error_comp[j][0] = abs(dx - self.learned_data[i][2])
-            error_comp[j][1] = abs(dy - self.learned_data[i][3])
+            error_comp[j][0] = (dx - self.learned_data[i][2])**2
+            tot_x_err += error_comp[j][0]
+
+            error_comp[j][1] = (dy - self.learned_data[i][3])**2
+            tot_y_err += error_comp[j][1]
+
+            error_comp[j][2] = (dth - self.learned_data[i][4])**2
+            tot_th_err += error_comp[j][2]
+
+            ss_tot_x += (self.learned_data[i][2] - mean_x)**2
+            ss_tot_y += (self.learned_data[i][3] - mean_y)**2
+            ss_tot_th += (self.learned_data[i][4] - mean_th)**2
 
             i += 1
+
+        avg_x_err = tot_x_err/self.N_test
+        avg_y_err = tot_y_err/self.N_test
+        avg_th_err = tot_th_err/self.N_test
+
+        R2_x = 1 - (tot_x_err/ss_tot_x)
+        R2_y = 1 - (tot_y_err/ss_tot_y)
+        R2_th = 1 - (tot_th_err/ss_tot_th)
+
+        print("MSE X Error:")
+        print(avg_x_err)
+
+        print("MSE Y Error")
+        print(avg_y_err)
+
+        print("MSE Th Error")
+        print(avg_th_err)
+
+        print("R2 Values (x, y, th):")
+        print(R2_x)
+        print(R2_y)
+        print(R2_th)
 
         plt.figure()
 
