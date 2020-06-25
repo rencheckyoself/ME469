@@ -532,8 +532,6 @@ class HW2(object):
             plt.xlabel("Query Index")
             plt.ylabel("Varience")
 
-
-
     def part_b_eval(self, data_files):
         """
         Function to do some extra post processing of the results using the saved
@@ -675,7 +673,7 @@ class HW2(object):
         return new_pos
 
     def plot_map(self):
-        """\
+        """
         Plots the Landmarks Locations and Walls
 
         Input:
